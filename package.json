@@ -16,6 +16,8 @@
     "stt:setup": "bash scripts/setup-stt.sh",
     "smoke": "npm run build && electron out/main/smoke.js",
     "audit": "npm run build && electron out/main/audit.js",
+    "bench": "npm run build && electron out/main/bench.js",
+    "bench:rss": "npm run build && node scripts/measure-idle.mjs",
     "assets": "python3 scripts/make-tray-icon.py",
     "package": "bash scripts/package.sh"
   },

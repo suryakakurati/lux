@@ -13,7 +13,8 @@ export default defineConfig({
         input: {
           index: resolve(__dirname, 'electron/main/index.ts'),
           smoke: resolve(__dirname, 'electron/main/smoke.ts'),
-          audit: resolve(__dirname, 'electron/main/audit.ts')
+          audit: resolve(__dirname, 'electron/main/audit.ts'),
+          bench: resolve(__dirname, 'electron/main/bench.ts')
         }
       }
     }
