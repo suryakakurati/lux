@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>NSMicrophoneUsageDescription</key>
+  <string>Lux records audio only while you hold the right Option key, and transcribes it on this Mac.</string>
+  <key>NSAppleEventsUsageDescription</key>
+  <string>Lux uses AppleScript to open apps, control playback and read the machine state you ask about.</string>
+  <key>NSAudioCaptureUsageDescription</key>
+  <string>Lux records audio only while you hold the right Option key.</string>
+  <key>LSMinimumSystemVersion</key>
+  <string>13.0</string>
+  <key>NSHumanReadableCopyright</key>
+  <string>Lux — a local assistant. Nothing leaves this Mac.</string>
+</dict>
+</plist>

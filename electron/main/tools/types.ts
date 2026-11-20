@@ -1,0 +1,58 @@
+import type { ToolParams } from '../../../shared/validate'
+import type { OllamaTool } from '../agent/ollama'
+
+export interface ToolContext {
+  commitments: import('../commitments').CommitmentLedger
+  confirm(request: { tool: string; args: Record<string, unknown>; reason: string }): Promise<boolean>
+  notify(title: string, body: string): void
+  speak(text: string): void
+  remember(fact: string): void
+  settings: import('../../../shared/types').Settings
+  /** Present in the app; omitted by isolated audit/smoke harnesses. */
+  models?: import('../agent/model-manager').ModelManager
+}
+
+export interface ToolResult {
+  /** Text handed back to the model. */
+  content: string
+  /** One short human-readable line for the HUD/activity row. */
+  summary: string
+  /** Force the chat window open when this result deserves reading. */
+  openChat?: boolean
+}
+
+export interface ToolDef {
+  name: string
+  description: string
+  /** `confirm` tools pause and ask the person before running. */
+  risk: 'safe' | 'confirm'
+  params: ToolParams
+  /** Independent, read-only calls can run together in one agent round. */
+  parallelSafe?: boolean
+  /** Hard limit for one call; a hung tool must not freeze the turn. */
+  timeoutMs?: number
+  run(args: Record<string, unknown>, context: ToolContext): Promise<ToolResult>
+}
+
+export type { ToolParams }
+
+export interface ToolCallOutcome {
+  ok: boolean
+  summary: string
+  content: string
+  durationMs: number
+  openChat?: boolean
+  denied?: boolean
+}
+
+/** Convert our definitions into Ollama's function-calling schema. */
+export function toOllamaTools(defs: ToolDef[]): OllamaTool[] {
+  return defs.map((def) => ({
+    type: 'function',
+    function: {
+      name: def.name,
+      description: def.description,
+      parameters: def.params as unknown as Record<string, unknown>
+    }
+  }))
+}

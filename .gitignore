@@ -1,0 +1,32 @@
+node_modules/
+out/
+dist/
+release/
+build/
+logs/
+data/
+coverage/
+*.log
+*.tsbuildinfo
+.DS_Store
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+
+# Native and Electron build artifacts
+native/hotkey/build/
+native/**/build/
+resources/bin/
+resources/app-icon.png
+resources/Lux.icns
+
+# Editor and OS state
+.vscode/
+.idea/
+*.xcuserstate
+*.xcworkspace/xcuserdata/
+
+# Large or raw benchmark output
+docs/benchmarks/raw/

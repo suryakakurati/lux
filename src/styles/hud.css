@@ -1,0 +1,344 @@
+/* The voice HUD — a dark glass instrument that floats over the desktop.
+   Same reactor language as the chat window: ion rings, a live core driven by
+   real microphone RMS, and one scan of light across the panel. */
+
+html,
+body,
+#root {
+  background: transparent;
+  overflow: hidden;
+}
+
+.hud {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px;
+}
+
+.hud-pill {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 0 20px;
+  border-radius: 20px;
+  border: 1px solid rgba(151, 214, 218, 0.16);
+  background:
+    radial-gradient(60% 110% at 8% 0%, rgba(92, 235, 212, 0.08), transparent 58%),
+    linear-gradient(180deg, rgba(20, 32, 40, 0.92), rgba(7, 12, 17, 0.95));
+  backdrop-filter: blur(28px) saturate(130%);
+  box-shadow: var(--shadow-hud);
+  overflow: hidden;
+  animation: hud-in 320ms var(--ease-out) both;
+}
+
+.hud-pill::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 34%;
+  left: -40%;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(92, 235, 212, 0.055), transparent);
+  animation: hud-scan 5.5s var(--ease-in-out) infinite;
+}
+
+.hud-pill::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 2px;
+  width: 100%;
+  background: linear-gradient(90deg, transparent, var(--ion) 45%, var(--ion-bright));
+  transform-origin: left center;
+  transform: scaleX(var(--progress, 0));
+  transition: transform 120ms linear, opacity 300ms var(--ease);
+  opacity: 0;
+}
+
+.hud[data-state="listening"] .hud-pill::after {
+  opacity: 0.9;
+}
+
+.hud[data-state="listening"] .hud-pill {
+  border-color: rgba(92, 235, 212, 0.32);
+  box-shadow:
+    var(--shadow-hud),
+    0 0 50px -10px rgba(92, 235, 212, 0.28);
+}
+
+@keyframes hud-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes hud-scan {
+  0% {
+    left: -40%;
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    left: 110%;
+    opacity: 0;
+  }
+}
+
+/* ------------------------------------------------------------------ orb */
+
+.hud-orb {
+  position: relative;
+  width: 46px;
+  height: 46px;
+  flex: 0 0 46px;
+  display: grid;
+  place-items: center;
+}
+
+.orb-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(92, 235, 212, 0.26);
+}
+
+.orb-ring--inner {
+  inset: 7px;
+  border-color: rgba(92, 235, 212, 0.16);
+}
+
+.orb-core {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 34% 30%, #f4fffd, var(--ion) 44%, var(--ion-deep));
+  box-shadow:
+    0 0 14px rgba(92, 235, 212, 0.65),
+    0 0 0 4px rgba(92, 235, 212, 0.07);
+  transition: transform 90ms linear, background 300ms var(--ease);
+}
+
+.hud[data-state="listening"] .orb-ring {
+  animation: pulse-ring 2.1s var(--ease) infinite;
+  border-color: rgba(92, 235, 212, 0.5);
+}
+
+.hud[data-state="listening"] .orb-ring--inner {
+  animation-delay: 0.35s;
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.86);
+    opacity: 0.9;
+  }
+  70% {
+    transform: scale(1.08);
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.hud[data-state="transcribing"] .hud-orb,
+.hud[data-state="thinking"] .hud-orb {
+  animation: orb-breathe 1.6s var(--ease) infinite;
+}
+
+.hud[data-state="transcribing"] .orb-ring,
+.hud[data-state="thinking"] .orb-ring {
+  border-color: transparent;
+  border-top-color: var(--ion);
+  animation: orb-spin 1.15s linear infinite;
+}
+
+.hud[data-state="transcribing"] .orb-ring--inner,
+.hud[data-state="thinking"] .orb-ring--inner {
+  border-color: rgba(92, 235, 212, 0.12);
+  animation: none;
+}
+
+.hud[data-state="transcribing"] .orb-core,
+.hud[data-state="thinking"] .orb-core {
+  width: 12px;
+  height: 12px;
+  background: var(--ion);
+  box-shadow: 0 0 12px rgba(92, 235, 212, 0.8), 0 0 0 3px rgba(92, 235, 212, 0.1);
+}
+
+@keyframes orb-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes orb-breathe {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.hud[data-state="acting"] .orb-core,
+.hud[data-state="done"] .orb-core {
+  background: radial-gradient(circle at 34% 30%, #f4fffd, var(--ion) 52%, var(--ion-deep));
+}
+
+.hud[data-state="acting"] .orb-ring {
+  border-style: dashed;
+  border-color: rgba(92, 235, 212, 0.42);
+  animation: orb-spin 3.2s linear infinite;
+}
+
+.hud[data-state="planning"] .orb-ring,
+.hud[data-state="researching"] .orb-ring,
+.hud[data-state="reading"] .orb-ring,
+.hud[data-state="verifying"] .orb-ring {
+  border-color: rgba(92, 235, 212, 0.38);
+}
+
+.hud[data-state="researching"] .orb-core,
+.hud[data-state="reading"] .orb-core {
+  background: radial-gradient(circle at 34% 30%, #d8fffa, var(--ion-deep) 66%, #0a4c45);
+}
+
+.hud[data-state="planning"] .hud-status,
+.hud[data-state="researching"] .hud-status,
+.hud[data-state="reading"] .hud-status,
+.hud[data-state="verifying"] .hud-status {
+  color: var(--ion);
+}
+
+.hud[data-state="done"] .orb-core::after,
+.hud[data-state="brief"] .orb-core::after {
+  content: "";
+  position: absolute;
+  width: 7px;
+  height: 4px;
+  border-left: 1.6px solid #04211d;
+  border-bottom: 1.6px solid #04211d;
+  transform: translate(-1px, -1px) rotate(-45deg);
+}
+
+.hud[data-state="brief"] .hud-orb {
+  animation: orb-breathe 3.2s var(--ease) infinite;
+}
+
+.hud[data-state="brief"] .orb-core {
+  background: radial-gradient(circle at 34% 30%, #f4fffd, var(--ion) 50%, var(--ion-deep));
+}
+
+.hud[data-state="brief"] .orb-ring {
+  border-color: rgba(92, 235, 212, 0.3);
+}
+
+.hud[data-state="brief"] .hud-status {
+  color: var(--ion);
+  letter-spacing: 0.16em;
+}
+
+.hud[data-state="error"] .orb-core {
+  background: radial-gradient(circle at 34% 30%, #ffd9df, var(--danger) 55%, #8a1e2e);
+  box-shadow: 0 0 0 4px rgba(255, 111, 134, 0.1);
+}
+
+.hud[data-state="error"] .orb-ring {
+  border-color: rgba(255, 111, 134, 0.4);
+}
+
+.hud[data-state="error"] .hud-status {
+  color: var(--danger);
+}
+
+/* ----------------------------------------------------------------- copy */
+
+.hud-copy {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.hud-status {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 8.5px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  color: rgba(146, 250, 233, 0.8);
+  transition: color 200ms var(--ease);
+}
+
+.hud-clock {
+  color: var(--ink-4);
+  letter-spacing: 0.08em;
+}
+
+.hud-primary {
+  font-size: 14.5px;
+  line-height: 1.4;
+  color: var(--ink);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  letter-spacing: -0.005em;
+}
+
+.hud[data-state="listening"] .hud-primary {
+  color: var(--ink-2);
+}
+
+/* -------------------------------------------------------------- waveform */
+
+.waveform {
+  display: flex;
+  align-items: center;
+  gap: 2.5px;
+  height: 40px;
+  flex: 0 0 84px;
+  justify-content: flex-end;
+}
+
+.wave-bar {
+  width: 2.5px;
+  border-radius: 99px;
+  height: calc(3px + var(--h, 0.06) * 34px);
+  background: linear-gradient(180deg, var(--ion-bright), var(--ion-deep));
+  opacity: 0.24;
+  transition: height 90ms linear, opacity 200ms var(--ease);
+}
+
+.hud[data-state="listening"] .wave-bar {
+  opacity: 0.9;
+}
+
+.hud:not([data-state="listening"]) .wave-bar {
+  background: rgba(146, 250, 233, 0.55);
+  opacity: 0.4;
+  height: 3px;
+}

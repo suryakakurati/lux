@@ -1,0 +1,76 @@
+/* Lux design tokens — "Sentinel": a near-black instrument panel with one ion
+   cyan signal. Depth comes from layered glass, hairlines and light rather than
+   from large saturated surfaces. Amber is reserved for the engine waking and
+   coral for failures; everything else is monochrome so the cyan reads as live
+   instrumentation instead of decoration. */
+
+:root {
+  /* surfaces */
+  --void: #05080b;
+  --abyss: #080d12;
+  --panel: #0c141a;
+  --panel-soft: #111c24;
+  --panel-lift: #16232d;
+
+  /* type */
+  --ink: #e9f4f5;
+  --ink-2: rgba(222, 240, 242, 0.76);
+  --ink-3: rgba(202, 228, 233, 0.52);
+  --ink-4: rgba(190, 220, 227, 0.32);
+
+  /* one signal */
+  --ion: #5cebd4;
+  --ion-bright: #a6fff0;
+  --ion-deep: #17a893;
+  --ion-dim: rgba(92, 235, 212, 0.14);
+  --ion-line: rgba(92, 235, 212, 0.26);
+  --amber: #f2b45e;
+  --amber-dim: rgba(242, 180, 94, 0.14);
+  --danger: #ff6f86;
+  --danger-dim: rgba(255, 111, 134, 0.13);
+  --positive: #5cebd4;
+
+  --rule: rgba(151, 197, 205, 0.1);
+  --rule-strong: rgba(151, 197, 205, 0.2);
+  --tint: rgba(92, 235, 212, 0.07);
+  --tint-strong: rgba(92, 235, 212, 0.13);
+
+  --glass: rgba(14, 23, 30, 0.72);
+  --glass-strong: rgba(9, 15, 20, 0.94);
+  --glass-line: rgba(155, 214, 218, 0.13);
+  --glass-line-strong: rgba(166, 236, 236, 0.24);
+
+  --rail-top: #0a1218;
+  --rail-mid: #0b141a;
+  --rail-bottom: #070d12;
+
+  --radius-xs: 5px;
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 18px;
+
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
+  --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
+
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+  --shadow-hud:
+    0 30px 80px -26px rgba(0, 0, 0, 0.8),
+    0 0 0 1px rgba(140, 220, 220, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 24px 60px -40px #000;
+  --glow-ion: 0 0 18px rgba(92, 235, 212, 0.28);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

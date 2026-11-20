@@ -1,0 +1,216 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  background: var(--void);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow: hidden;
+  user-select: none;
+}
+
+::selection {
+  background: rgba(92, 235, 212, 0.28);
+  color: #f2fffd;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: default;
+}
+
+input,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 1px solid var(--ion-line);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(140, 200, 205, 0.16);
+  border: 3px solid transparent;
+  background-clip: padding-box;
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(140, 220, 220, 0.28);
+  background-clip: padding-box;
+}
+
+.selectable {
+  user-select: text;
+  cursor: auto;
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-feature-settings: "tnum" 1;
+}
+
+.label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+}
+
+/* --------------------------------------------------------------- reactor */
+
+/* The house mark: instrument rings around a live core. It is decorative, so
+   it is marked aria-hidden at the component and scales from one variable. */
+.reactor {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: var(--reactor, 32px);
+  height: var(--reactor, 32px);
+  flex: 0 0 auto;
+}
+
+.reactor-halo {
+  position: absolute;
+  inset: -22%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(92, 235, 212, 0.24), transparent 68%);
+  filter: blur(2px);
+  opacity: 0.8;
+  animation: reactor-halo 4.4s var(--ease-in-out) infinite;
+}
+
+.reactor-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid rgba(92, 235, 212, 0.24);
+}
+
+.reactor-ring--outer {
+  inset: 0;
+  border-color: rgba(92, 235, 212, 0.2);
+  border-style: dashed;
+  animation: reactor-spin 22s linear infinite;
+}
+
+.reactor-ring--mid {
+  inset: 20%;
+  border-color: rgba(92, 235, 212, 0.34);
+  border-top-color: var(--ion);
+  animation: reactor-spin 7s linear infinite reverse;
+}
+
+.reactor-tick {
+  position: absolute;
+  width: 1px;
+  height: 16%;
+  border-radius: 1px;
+  background: rgba(166, 255, 240, 0.6);
+  transform-origin: 50% calc(var(--reactor, 32px) / 2);
+}
+
+.reactor-tick--a {
+  top: 0;
+  transform: rotate(38deg);
+}
+
+.reactor-tick--b {
+  bottom: 0;
+  transform: rotate(38deg);
+}
+
+.reactor-core {
+  width: 36%;
+  height: 36%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 34% 30%, #f4fffd, var(--ion) 46%, var(--ion-deep));
+  box-shadow:
+    0 0 10px rgba(92, 235, 212, 0.6),
+    0 0 26px rgba(92, 235, 212, 0.28);
+  animation: reactor-pulse 2.8s var(--ease-in-out) infinite;
+}
+
+.reactor[data-active="false"] .reactor-halo,
+.reactor[data-active="false"] .reactor-core {
+  animation-play-state: paused;
+  opacity: 0.5;
+}
+
+.reactor[data-active="false"] .reactor-ring {
+  animation-play-state: paused;
+  border-color: rgba(151, 197, 205, 0.16);
+  border-top-color: rgba(151, 197, 205, 0.3);
+}
+
+.reactor[data-active="false"] .reactor-core {
+  background: radial-gradient(circle at 34% 30%, #93a8ab, #465b60 55%, #22333a);
+  box-shadow: none;
+}
+
+@keyframes reactor-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes reactor-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(0.86);
+    opacity: 0.82;
+  }
+}
+
+@keyframes reactor-halo {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(0.96);
+  }
+  50% {
+    opacity: 0.95;
+    transform: scale(1.06);
+  }
+}
