@@ -1,0 +1,7 @@
+{
+  "at": "2026-11-20T22:39:43.147Z",
+  "idleRssMb": 461,
+  "processes": 7,
+  "waitMs": 60000,
+  "note": "Sum of RSS across the app and all of its child processes after the settle window. Ollama is a separate process and is not counted."
+}
