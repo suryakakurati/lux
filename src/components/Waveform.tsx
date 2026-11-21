@@ -7,10 +7,10 @@ interface WaveformProps {
 }
 
 /**
- * The HUD waveform. A rolling buffer of real microphone levels, drawn as
- * thin crimson bars — it must move with the voice, not with a CSS loop.
+ * The HUD level indicator. A rolling buffer of measured microphone levels, so
+ * the meter moves with the voice instead of following a CSS loop.
  */
-export function Waveform({ level, active, bars = 22 }: WaveformProps) {
+export function Waveform({ level, active, bars = 16 }: WaveformProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const values = useRef<number[]>(new Array(bars).fill(0.05))
 

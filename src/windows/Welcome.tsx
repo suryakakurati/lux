@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import type { PermissionsStatus } from '../../shared/types'
-import { Reactor } from '../components/Reactor'
 import '../styles/welcome.css'
 
 export function Welcome() {
@@ -26,23 +25,20 @@ export function Welcome() {
   return (
     <div className="welcome">
       <header className="welcome-head">
-        <Reactor size={26} />
-        <span className="welcome-mark">LUX</span>
-        <span className="welcome-kicker mono">private · local · always here</span>
+        <span className="welcome-mark">Lux</span>
+        <span className="welcome-version">0.1</span>
+        <span className="welcome-kicker">Private, local, on this Mac</span>
       </header>
 
-      <h1 className="welcome-title">
-        Three permissions,<br />
-        then I’m yours.
-      </h1>
+      <h1 className="welcome-title">Set up three permissions</h1>
       <p className="welcome-sub">
-        Lux never sends audio, text or screen content anywhere. The model runs on this Mac, and the
-        only network calls are the ones you ask for.
+        Lux never sends audio, text or screen content anywhere. The model runs on this Mac, and the only
+        network requests are the ones you ask for.
       </p>
 
       <ol className="steps">
         <Step
-          index="01"
+          index="1"
           title="Microphone"
           description="Only open while you hold right ⌥."
           state={micOk ? 'done' : 'todo'}
@@ -58,7 +54,7 @@ export function Welcome() {
           }}
         />
         <Step
-          index="02"
+          index="2"
           title="Input monitoring"
           description="Lets the native listener see a held right Option without reading your keystrokes."
           state={inputOk ? 'done' : 'todo'}
@@ -66,7 +62,7 @@ export function Welcome() {
           onAction={() => void window.lux.openPermissionPane('input')}
         />
         <Step
-          index="03"
+          index="3"
           title="Hotkey helper"
           description={
             binaryOk
@@ -74,7 +70,7 @@ export function Welcome() {
               : 'Run “npm run hotkey” once in the project folder, then reopen this window.'
           }
           state={binaryOk ? 'done' : 'todo'}
-          action={binaryOk ? undefined : 'How?'}
+          action={binaryOk ? undefined : 'Details'}
           onAction={() => void window.lux.openPermissionPane('input')}
         />
       </ol>
@@ -82,19 +78,19 @@ export function Welcome() {
       <div className="keys">
         <div className="keycap-group">
           <kbd className="keycap">⌥</kbd>
-          <span className="key-label">hold to talk</span>
+          <span className="key-label">Hold to talk</span>
         </div>
         <div className="key-divider" />
         <div className="keycap-group">
           <kbd className="keycap">⇧</kbd>
           <kbd className="keycap">⌥</kbd>
-          <span className="key-label">open chat</span>
+          <span className="key-label">Open chat</span>
         </div>
       </div>
 
       <div className="welcome-foot">
-        <button className="welcome-skip mono" onClick={() => refresh()}>
-          Re-check
+        <button className="welcome-skip" onClick={() => refresh()}>
+          Check again
         </button>
         <button className="welcome-start" onClick={() => void window.lux.finishSetup()}>
           Start using Lux
@@ -121,17 +117,17 @@ function Step({
 }) {
   return (
     <li className="step" data-state={state}>
-      <span className="step-index mono">{index}</span>
+      <span className="step-index">{index}</span>
       <div className="step-copy">
         <span className="step-title">{title}</span>
         <span className="step-desc">{description}</span>
       </div>
       {action ? (
-        <button className="step-action mono" onClick={onAction}>
+        <button className="step-action" onClick={onAction}>
           {action}
         </button>
       ) : (
-        <span className="step-done mono">ready</span>
+        <span className="step-done">Ready</span>
       )}
     </li>
   )

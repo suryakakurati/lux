@@ -1,68 +1,120 @@
-/* Lux design tokens — "Sentinel": a near-black instrument panel with one ion
-   cyan signal. Depth comes from layered glass, hairlines and light rather than
-   from large saturated surfaces. Amber is reserved for the engine waking and
-   coral for failures; everything else is monochrome so the cyan reads as live
-   instrumentation instead of decoration. */
+/* Lux design tokens.
+   A calm macOS utility: neutral surfaces, system typography, one restrained
+   blue accent for primary actions and focus. Status colours are only used to
+   report status. There are no gradients, glows or decorative animation. */
 
 :root {
-  /* surfaces */
-  --void: #05080b;
-  --abyss: #080d12;
-  --panel: #0c141a;
-  --panel-soft: #111c24;
-  --panel-lift: #16232d;
+  /* 4 px spacing grid */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
 
-  /* type */
-  --ink: #e9f4f5;
-  --ink-2: rgba(222, 240, 242, 0.76);
-  --ink-3: rgba(202, 228, 233, 0.52);
-  --ink-4: rgba(190, 220, 227, 0.32);
+  /* radii */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
 
-  /* one signal */
-  --ion: #5cebd4;
-  --ion-bright: #a6fff0;
-  --ion-deep: #17a893;
-  --ion-dim: rgba(92, 235, 212, 0.14);
-  --ion-line: rgba(92, 235, 212, 0.26);
-  --amber: #f2b45e;
-  --amber-dim: rgba(242, 180, 94, 0.14);
-  --danger: #ff6f86;
-  --danger-dim: rgba(255, 111, 134, 0.13);
-  --positive: #5cebd4;
-
-  --rule: rgba(151, 197, 205, 0.1);
-  --rule-strong: rgba(151, 197, 205, 0.2);
-  --tint: rgba(92, 235, 212, 0.07);
-  --tint-strong: rgba(92, 235, 212, 0.13);
-
-  --glass: rgba(14, 23, 30, 0.72);
-  --glass-strong: rgba(9, 15, 20, 0.94);
-  --glass-line: rgba(155, 214, 218, 0.13);
-  --glass-line-strong: rgba(166, 236, 236, 0.24);
-
-  --rail-top: #0a1218;
-  --rail-mid: #0b141a;
-  --rail-bottom: #070d12;
-
-  --radius-xs: 5px;
-  --radius-sm: 8px;
-  --radius: 12px;
-  --radius-lg: 18px;
-
-  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
+  /* type scale */
   --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
-  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-base: 13px;
+  --text-md: 15px;
+  --text-lg: 17px;
+  --text-xl: 22px;
+
+  /* motion — functional only */
+  --dur-fast: 120ms;
+  --dur: 160ms;
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
-  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
 
-  --shadow-hud:
-    0 30px 80px -26px rgba(0, 0, 0, 0.8),
-    0 0 0 1px rgba(140, 220, 220, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 24px 60px -40px #000;
-  --glow-ion: 0 0 18px rgba(92, 235, 212, 0.28);
+  /* layout */
+  --sidebar-width: 244px;
+  --content-width: 700px;
+
+  /* light theme */
+  color-scheme: light dark;
+
+  --bg: #f6f6f7;
+  --surface: #ffffff;
+  --surface-2: #f1f1f3;
+  --surface-3: #e8e8ea;
+  --sidebar: #ececee;
+  --sidebar-active: #dededf;
+
+  --line: rgba(0, 0, 0, 0.09);
+  --line-strong: rgba(0, 0, 0, 0.16);
+
+  --ink: #1d1d1f;
+  --ink-2: #454548;
+  --ink-3: #6e6e73;
+  --ink-4: #8a8a8f;
+
+  --accent: #0b6bd6;
+  --accent-hover: #0a5bb8;
+  --accent-soft: rgba(11, 107, 214, 0.1);
+  --on-accent: #ffffff;
+
+  --success: #1a7f37;
+  --warning: #9a5b00;
+  --warning-soft: rgba(154, 91, 0, 0.1);
+  --danger: #c62828;
+  --danger-soft: rgba(198, 40, 40, 0.08);
+
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-2: 0 8px 24px -10px rgba(0, 0, 0, 0.18);
+  --shadow-3: -12px 0 40px -18px rgba(0, 0, 0, 0.28);
+
+  --selection: rgba(11, 107, 214, 0.18);
+  --scrollbar: rgba(0, 0, 0, 0.16);
+  --scrollbar-hover: rgba(0, 0, 0, 0.28);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1c1c1e;
+    --surface: #262628;
+    --surface-2: #2c2c2e;
+    --surface-3: #363638;
+    --sidebar: #1a1a1c;
+    --sidebar-active: #2e2e30;
+
+    --line: rgba(255, 255, 255, 0.09);
+    --line-strong: rgba(255, 255, 255, 0.18);
+
+    --ink: #f2f2f4;
+    --ink-2: #c9c9ce;
+    --ink-3: #9a9aa0;
+    --ink-4: #85858b;
+
+    --accent: #2b74d9;
+    --accent-hover: #3d86ec;
+    --accent-soft: rgba(88, 153, 255, 0.14);
+    --on-accent: #ffffff;
+
+    --success: #35c759;
+    --warning: #f0a02a;
+    --warning-soft: rgba(240, 160, 42, 0.12);
+    --danger: #ff6961;
+    --danger-soft: rgba(255, 105, 97, 0.12);
+
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-2: 0 10px 28px -12px rgba(0, 0, 0, 0.55);
+    --shadow-3: -12px 0 40px -18px rgba(0, 0, 0, 0.6);
+
+    --selection: rgba(88, 153, 255, 0.24);
+    --scrollbar: rgba(255, 255, 255, 0.16);
+    --scrollbar-hover: rgba(255, 255, 255, 0.28);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -72,5 +124,6 @@
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
   }
 }

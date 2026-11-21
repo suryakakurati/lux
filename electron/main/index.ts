@@ -3,6 +3,7 @@ import {
   BrowserWindow,
   globalShortcut,
   Menu,
+  nativeTheme,
   powerMonitor,
   protocol,
   shell,
@@ -69,6 +70,11 @@ if (!gotLock) {
 async function bootstrap(): Promise<void> {
   await app.whenReady()
   initLog()
+
+  // `LUX_THEME=light|dark` pins the appearance for screenshots and visual QA.
+  if (process.env.LUX_THEME === 'light' || process.env.LUX_THEME === 'dark') {
+    nativeTheme.themeSource = process.env.LUX_THEME
+  }
 
   process.on('uncaughtException', (error) => logLine('crash', `uncaught: ${error?.stack ?? error}`))
   process.on('unhandledRejection', (reason) => logLine('crash', `unhandled rejection: ${String(reason)}`))
@@ -194,6 +200,11 @@ async function bootstrap(): Promise<void> {
     const win = showChatWindow()
     const capture = async (): Promise<void> => {
       await new Promise((resolve) => setTimeout(resolve, 1_400))
+      // `LUX_SHOT_SETTINGS=1` opens the settings panel in the captured frame.
+      if (process.env.LUX_SHOT_SETTINGS) {
+        broadcast({ kind: 'open-settings' })
+        await new Promise((resolve) => setTimeout(resolve, 500))
+      }
       const image = await win.webContents.capturePage()
       await writeFile(target, image.toPNG())
       console.log(`[lux] captured ${target}`)

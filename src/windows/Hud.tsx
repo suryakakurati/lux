@@ -5,19 +5,29 @@ import { VoiceRecorder } from '../lib/recorder'
 import '../styles/hud.css'
 
 const LABELS: Record<HudState, string> = {
-  idle: 'LUX',
-  listening: 'LISTENING',
-  transcribing: 'TRANSCRIBING',
-  thinking: 'THINKING',
-  planning: 'PLANNING',
-  researching: 'RESEARCHING',
-  reading: 'READING',
-  verifying: 'VERIFYING',
-  acting: 'WORKING',
-  done: 'DONE',
-  brief: 'MORNING BRIEF',
-  error: 'TROUBLE'
+  idle: 'Lux',
+  listening: 'Listening',
+  transcribing: 'Transcribing',
+  thinking: 'Thinking',
+  planning: 'Planning',
+  researching: 'Researching',
+  reading: 'Reading',
+  verifying: 'Checking',
+  acting: 'Working',
+  done: 'Done',
+  brief: 'Morning brief',
+  error: 'Something went wrong'
 }
+
+const BUSY: HudState[] = [
+  'transcribing',
+  'thinking',
+  'planning',
+  'researching',
+  'reading',
+  'verifying',
+  'acting'
+]
 
 export function Hud() {
   const [state, setState] = useState<HudState>('idle')
@@ -25,8 +35,6 @@ export function Hud() {
   const [detail, setDetail] = useState('')
   const [level, setLevel] = useState(0)
   const [seconds, setSeconds] = useState(0)
-  // Time spent thinking/acting: a 90-second silent HUD reads as a hang.
-  const [working, setWorking] = useState(0)
 
   const recorder = useRef<VoiceRecorder | null>(null)
   const stateRef = useRef<HudState>('idle')
@@ -68,11 +76,11 @@ export function Hud() {
       stopTicker()
       const result = voice.stop()
       if (!result) {
-        window.lux.hud.error('I didn’t hear anything.')
+        window.lux.hud.error('No audio was recorded.')
         return
       }
       if (result.peak < 0.004) {
-        window.lux.hud.error('No audio detected — is the mic muted?')
+        window.lux.hud.error('No audio detected — is the microphone muted?')
         return
       }
       window.lux.hud.audio(result.wav)
@@ -120,24 +128,12 @@ export function Hud() {
     }
   }, [])
 
-  useEffect(() => {
-    if (state !== 'thinking' && state !== 'acting') {
-      setWorking(0)
-      return
-    }
-    const started = Date.now()
-    const timer = window.setInterval(() => {
-      setWorking(Math.round((Date.now() - started) / 1000))
-    }, 1_000)
-    return () => window.clearInterval(timer)
-  }, [state])
-
   const status = LABELS[state]
   const primary =
     transcript ||
     detail ||
     (state === 'listening'
-      ? 'Go ahead — I’m listening.'
+      ? 'Go ahead, I’m listening.'
       : state === 'transcribing'
         ? 'One moment.'
         : state === 'thinking'
@@ -146,30 +142,40 @@ export function Hud() {
             ? 'Hold right ⌥ to speak.'
             : '')
 
+  const elapsed = state === 'listening' ? `${seconds.toFixed(1)}s` : ''
+
   return (
     <div className="hud" data-state={state}>
       <div className="hud-pill">
-        <div className="hud-orb" data-state={state}>
-          <span className="orb-ring" />
-          <span className="orb-ring orb-ring--inner" />
-          <span className="orb-core" style={{ transform: `scale(${0.72 + Math.min(level, 1) * 0.35})` }} />
-        </div>
+        <span className="hud-status-dot" aria-hidden="true" />
 
         <div className="hud-copy">
-          <div className="hud-status mono">
+          <div className="hud-status">
             <span>{status}</span>
-            {state === 'listening' && <span className="hud-clock">{seconds.toFixed(1)}s</span>}
-            {(state === 'thinking' || state === 'acting') && working > 0 && (
-              <span className="hud-clock">{working}s</span>
-            )}
+            {elapsed && <span className="hud-clock">{elapsed}</span>}
+            {state !== 'listening' && BUSY.includes(state) && <Elapsed key={state} />}
           </div>
           <div className="hud-primary" title={primary}>
             {primary}
           </div>
         </div>
 
-        <Waveform level={level} active={state === 'listening'} />
+        {state === 'listening' && <Waveform level={level} active bars={16} />}
       </div>
     </div>
   )
+}
+
+/** Elapsed time for a working state: a silent minute reads as a hang. */
+function Elapsed() {
+  const [seconds, setSeconds] = useState(0)
+  useEffect(() => {
+    const started = Date.now()
+    const timer = window.setInterval(
+      () => setSeconds(Math.round((Date.now() - started) / 1000)),
+      1_000
+    )
+    return () => window.clearInterval(timer)
+  }, [])
+  return seconds > 0 ? <span className="hud-clock">{seconds}s</span> : null
 }

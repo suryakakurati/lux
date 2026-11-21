@@ -1,10 +1,15 @@
-import { BrowserWindow, screen, shell } from 'electron'
+import { BrowserWindow, nativeTheme, screen, shell } from 'electron'
 import { join } from 'node:path'
 
 const preloadPath = join(__dirname, '../preload/index.js')
 
-export const HUD_WIDTH = 452
-export const HUD_HEIGHT = 168
+/** Matches the renderer window colour so a launch never flashes the wrong theme. */
+function windowBackground(): string {
+  return nativeTheme.shouldUseDarkColors ? '#1c1c1e' : '#f6f6f7'
+}
+
+export const HUD_WIDTH = 400
+export const HUD_HEIGHT = 132
 
 let chatWindow: BrowserWindow | null = null
 let hudWindow: BrowserWindow | null = null
@@ -53,7 +58,7 @@ export function createChatWindow(): BrowserWindow {
     minHeight: 560,
     show: false,
     title: 'Lux',
-    backgroundColor: '#05080B',
+    backgroundColor: windowBackground(),
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: { x: 18, y: 20 },
     webPreferences: {
@@ -170,7 +175,7 @@ export function createOnboardingWindow(): BrowserWindow {
     resizable: false,
     show: false,
     title: 'Welcome to Lux',
-    backgroundColor: '#05080B',
+    backgroundColor: windowBackground(),
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: { x: 18, y: 20 },
     webPreferences: {

@@ -80,20 +80,11 @@ export function IconChevron({ size = 12, strokeWidth = 1.8, className }: IconPro
   )
 }
 
-/** Four-point star: the Lux mark and the tool-trace spark. */
-export function IconSparkle({ size = 14, className }: IconProps) {
-  return (
-    <svg {...base(size)} className={className} fill="currentColor" aria-hidden="true">
-      <path d="M12 2.4c.33 4.9 2.35 6.92 7.25 7.25-4.9.33-6.92 2.35-7.25 7.25-.33-4.9-2.35-6.92-7.25-7.25C9.65 9.32 11.67 7.3 12 2.4Z" />
-    </svg>
-  )
-}
-
-export function IconGlobe({ size = 14, strokeWidth = 1.6, className }: IconProps) {
+export function IconSidebar({ size = 15, strokeWidth = 1.6, className }: IconProps) {
   return (
     <svg {...base(size)} className={className} fill="none" stroke="currentColor" strokeWidth={strokeWidth}>
-      <circle cx="12" cy="12" r="8.6" />
-      <path d="M3.5 12h17M12 3.5c2.4 2.3 3.6 5.2 3.6 8.5s-1.2 6.2-3.6 8.5c-2.4-2.3-3.6-5.2-3.6-8.5S9.6 5.8 12 3.5Z" />
+      <rect x="3.5" y="4.5" width="17" height="15" rx="2.5" />
+      <path d="M9.5 4.5v15" strokeLinecap="round" />
     </svg>
   )
 }
