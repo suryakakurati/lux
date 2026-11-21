@@ -37,7 +37,7 @@ npx @electron/packager . Lux \
   --out=release \
   --overwrite \
   --app-bundle-id=com.lux.assistant \
-  --app-version=0.1.0 \
+  --app-version=0.2.0 \
   --icon=resources/Lux.icns \
   --extend-info=resources/info.plist \
   --extra-resource=resources/bin \

@@ -4,6 +4,33 @@ All notable changes to Lux are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project follows semantic
 versioning.
 
+## [0.2.0] — 2026-11-21
+
+Voice and command accuracy. Minor version: new tools and a new speech engine, plus fixes found by
+testing every command type against the real model.
+
+### Added
+
+- Neural local voice (Piper) used by "Automatic" when no Premium or Enhanced macOS voice is
+  installed; `npm run voice:setup` installs it under `~/.cache/lux`.
+- Voice picker in Settings, showing each installed voice's language and quality tier.
+- `read_note` reads a Lux note in full, so a note can be written and read back.
+- `top_processes` ranks running processes by memory, with per-app totals.
+- `find_files` returns size and modification time, newest first, and never returns a directory as
+  the file someone asked for.
+
+### Fixed
+
+- A selected voice that has been deleted falls back to the automatic voice. `say` accepts an unknown
+  voice, exits 0 and stays silent, so presence is checked before speaking.
+- Whisper is found outside a login shell, and the Python CLI gets a PATH that can find `ffmpeg`;
+  transcription failures report the engine's error instead of returning stderr as the transcript.
+- The current date in context includes its year, so notes no longer invent one.
+- The engine warms at the configured 24K context instead of Ollama's 4K default, so the first turn
+  no longer reloads the model.
+- A stored 1,536-token output cap migrates to the 4,096 default.
+- The capability audit no longer checks a tool that does not exist (`list_timers`).
+
 ## [Unreleased]
 
 ### Fixed
@@ -88,3 +115,4 @@ measured performance pass and a designed interface.
 - A full hardware sleep/wake cycle has not been tested end to end.
 
 [0.1.0]: https://github.com/suryakakurati/lux/releases/tag/v0.1.0
+[0.2.0]: https://github.com/suryakakurati/lux/releases/tag/v0.2.0

@@ -1198,7 +1198,7 @@ function SettingsPanel({
         </section>
 
         <footer className="settings-foot">
-          <span>Lux 0.1.0</span>
+          <span>Lux 0.2.0</span>
           <span>{settings.sttEngine} speech recognition</span>
         </footer>
       </div>
