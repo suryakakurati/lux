@@ -45,6 +45,12 @@ const ENGINE_HEADLINE: Record<EngineState, string> = {
   missing: 'The configured model is not installed'
 }
 
+const THEME_OPTIONS: { value: Settings['theme']; label: string }[] = [
+  { value: 'system', label: 'System' },
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' }
+]
+
 const SUGGESTIONS = [
   'How is this Mac doing?',
   'Put me in my coding setup',
@@ -834,6 +840,27 @@ function SettingsPanel({
       </header>
 
       <div className="settings-body">
+        <section className="settings-section">
+          <h3 className="settings-section-title">Appearance</h3>
+          <div className="segmented" role="group" aria-label="Appearance">
+            {THEME_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                className="segmented-option"
+                data-active={local.theme === option.value}
+                aria-pressed={local.theme === option.value}
+                onClick={() => update({ theme: option.value })}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+          <p className="settings-note">
+            System follows macOS. Light and Dark keep Lux in one appearance, including the menu bar
+            panel and the floating HUD.
+          </p>
+        </section>
+
         <section className="settings-section">
           <h3 className="settings-section-title">Local engine</h3>
           <div className="engine-card">

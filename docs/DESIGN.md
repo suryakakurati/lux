@@ -20,7 +20,8 @@ telemetry — was replaced in 0.1.0 because it read as decoration around the wor
 
 ## Tokens
 
-Defined once in `src/styles/tokens.css`. Both themes follow the system appearance. The palette is
+Defined once in `src/styles/tokens.css`. Both themes follow the system appearance by default;
+Settings → Appearance can pin either one. The palette is
 the project's six-step wine and rose ramp — `#501423`, `#751C2F`, `#B72F4A`, `#EA5C6F`, `#EF96A3`,
 `#F4B4C1` — from `colorscheme.png`. The two darkest steps tint the surfaces, the crimson step is the
 accent, and the blush steps carry soft fills. The app icon already used the same wine, crimson and
@@ -40,8 +41,8 @@ blush values.
 | `--ink` | `#2a0810` | `#fdf1f4` | primary text |
 | `--ink-2` | `#57222f` | `#f0cdd5` | secondary text |
 | `--ink-3` | `#7b4351` | `#d9a9b5` | supporting text |
-| `--ink-4` | `#96606d` | `#c08d9a` | timestamps, hints |
-| `--accent` | `#b72f4a` | `#f06d80` | primary action, links, focus |
+| `--ink-4` | `#8f5965` | `#c08d9a` | timestamps, hints |
+| `--accent` | `#b72f4a` | `#f4899a` | primary action, links, focus |
 | `--success` | `#1a7f37` | `#6fcf97` | engine ready, tool succeeded |
 | `--warning` | `#8a5a00` | `#f2c078` | engine starting, model missing |
 | `--danger` | `#b3261e` | `#ff8a8a` | offline, failed or denied tool |
@@ -121,8 +122,9 @@ timer for decoration.
 - `:focus-visible` draws a 2 px accent ring with a 2 px offset. Mouse clicks do not show it.
 - The settings panel is a labelled `role="dialog" aria-modal="true"`; Escape closes it.
 - Approval is an `alertdialog`. Streaming replies and the working indicator use polite live regions.
-- Contrast targets WCAG AA: primary text is at least 12:1 on its surface in both themes; secondary
-  text is at least 4.5:1. Status colours are paired with a label or dot shape, never colour alone.
+- Contrast targets WCAG AA: primary text is at least 12:1 on its surface in both themes; secondary,
+  hint and accent text is at least 4.5:1 on every surface it appears on. Status colours are paired
+  with a label or dot shape, never colour alone.
 - Tool rows are buttons with `aria-expanded`; the detail is plain text and selectable.
 - The whole window is keyboard reachable: sidebar, thread, composer, settings.
 
@@ -143,8 +145,9 @@ Captured from the real app with the debug hooks described in the README:
 - **No native vibrancy.** Solid wine-tinted surfaces keep text contrast predictable over any desktop
   and make the light and dark themes behave the same. Translucency is limited to the floating HUD,
   where it serves hierarchy.
-- **System theme only.** There is no in-app appearance switch; the app follows macOS. A manual switch
-  would be a second setting with no product need.
+- **Appearance is one shared theme, not two products.** System follows macOS by default; Settings →
+  Appearance can pin Light or Dark. The setting drives `nativeTheme.themeSource`, so the windows,
+  menus, scrollbars and the HUD change together from the same token set.
 - **No instrument telemetry.** CPU, memory and battery are one quiet line in the sidebar, not gauges.
   They answer a question; they are not the product.
 - **No decorative animation.** The only looping motion is a working indicator and a text caret.

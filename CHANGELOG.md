@@ -24,6 +24,7 @@ measured performance pass and a designed interface.
 - Calm native interface: light and dark themes, system typography, wine and rose surfaces from the
   project's color scheme, one crimson accent, plain-text replies, a quiet expandable tool trace, a
   redesigned settings panel and a minimal HUD.
+- Appearance setting: System (default), Light or Dark, applied to every window and native control.
 - Explicit empty, checking, offline, missing-model, missing-permission, error, streaming and approval
   states.
 - Documentation set: architecture, agent, performance, design, security, troubleshooting, contributing,

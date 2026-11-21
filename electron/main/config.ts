@@ -26,6 +26,7 @@ const DEFAULT_PRESETS: Record<string, FocusPreset> = {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
+  theme: 'system',
   model: 'qwen3.5:latest',
   embeddingModel: 'nomic-embed-text:latest',
   specializedModel: '',
@@ -92,6 +93,7 @@ export function saveSettings(patch: Partial<Settings>): Settings {
   next.contextWindow = Math.min(32_768, Math.max(2_048, Number(next.contextWindow) || 8_192))
   next.maxOutputTokens = Math.min(8_192, Math.max(256, Number(next.maxOutputTokens) || 1_536))
   if (!next.modelKeepAlive.trim()) next.modelKeepAlive = '30m'
+  if (next.theme !== 'light' && next.theme !== 'dark') next.theme = 'system'
   if (next.memoryMode !== 'lexical' && next.memoryMode !== 'semantic') next.memoryMode = 'lexical'
   // A malformed time would silently disable delivery or quiet hours.
   if (parseClock(next.morningBriefTime) === null) next.morningBriefTime = DEFAULT_SETTINGS.morningBriefTime

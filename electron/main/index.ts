@@ -71,11 +71,6 @@ async function bootstrap(): Promise<void> {
   await app.whenReady()
   initLog()
 
-  // `LUX_THEME=light|dark` pins the appearance for screenshots and visual QA.
-  if (process.env.LUX_THEME === 'light' || process.env.LUX_THEME === 'dark') {
-    nativeTheme.themeSource = process.env.LUX_THEME
-  }
-
   process.on('uncaughtException', (error) => logLine('crash', `uncaught: ${error?.stack ?? error}`))
   process.on('unhandledRejection', (reason) => logLine('crash', `unhandled rejection: ${String(reason)}`))
 
@@ -83,6 +78,13 @@ async function bootstrap(): Promise<void> {
   installAppMenu()
 
   const settings = getSettings()
+  // The saved preference drives Chromium and every native control. Set it
+  // before the first window so there is no flash of the wrong appearance.
+  nativeTheme.themeSource = settings.theme
+  // `LUX_THEME=light|dark` still pins the appearance for screenshots and visual QA.
+  if (process.env.LUX_THEME === 'light' || process.env.LUX_THEME === 'dark') {
+    nativeTheme.themeSource = process.env.LUX_THEME
+  }
   const transcriber = new Transcriber(getSettings)
   const models = new ModelManager(getSettings)
   const memory = new Memory(join(dataDir(), 'memory.json'), () => ({
@@ -122,6 +124,7 @@ async function bootstrap(): Promise<void> {
   powerMonitor.on('unlock-screen', () => void engine.ensure('resume'))
 
   const saveAndBroadcast = (next: Settings): void => {
+    if (nativeTheme.themeSource !== next.theme) nativeTheme.themeSource = next.theme
     broadcast({ kind: 'settings', settings: next })
   }
 

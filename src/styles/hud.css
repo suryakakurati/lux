@@ -141,7 +141,7 @@ body,
 }
 
 .hud[data-state='listening'] .hud-primary {
-  color: #e8e8ec;
+  color: var(--hud-ink);
 }
 
 [data-state='thinking'] .hud-primary,

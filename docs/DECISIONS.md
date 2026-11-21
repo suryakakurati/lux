@@ -140,9 +140,10 @@ to a hosted model.
 ## ADR-013 — Calm native utility UI, not an instrument panel
 
 **Decision.** Replace Sentinel with a calm, system-typed desktop utility: light and dark themes
-following macOS, a solid conversation sidebar, plain reply text, one crimson accent from the
-project's wine and rose ramp for primary actions and focus, a quiet expandable tool trace, and a
-compact 400×132 HUD. No reactor, glow, gradients, scan lines or decorative animation.
+following macOS by default (pinnable in Settings → Appearance), a solid conversation sidebar, plain
+reply text, one crimson accent from the project's wine and rose ramp for primary actions and focus, a
+quiet expandable tool trace, and a compact 400×132 HUD. No reactor, glow, gradients, scan lines or
+decorative animation.
 
 **Why.** The agent's work is text and tool steps. Sentinel made the chrome louder than the answer and
 read as generated decoration. A native utility is easier to read for long sessions, respects system
@@ -150,11 +151,13 @@ appearance and accessibility settings, and stops encoding state in ornament. Mot
 state changes of 120–160 ms and honours `prefers-reduced-motion`.
 
 **Rejected.** Native vibrancy across the window (text contrast becomes unpredictable over the
-desktop), an in-app theme switch (macOS already owns appearance), keeping the reactor as a brand mark
-(decorative motion without information).
+desktop), separate hand-maintained themes per window (two token sets drift; one set keeps both
+appearances honest), keeping the reactor as a brand mark (decorative motion without information).
 
 **Consequence.** Screenshots and UI copy are part of the review surface. `LUX_SHOT`, `LUX_SHOT_HUD`,
 `LUX_SHOT_SETTINGS` and `LUX_THEME` make the real windows capturable without taking over the screen.
+Settings → Appearance persists System, Light or Dark; the choice is applied before the first window
+and on every subsequent save.
 
 ## ADR-014 — Deterministic plans and playbooks instead of more intent regexes
 

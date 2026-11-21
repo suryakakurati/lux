@@ -31,6 +31,9 @@ export interface ToolRun {
 
 export type EngineState = 'checking' | 'ready' | 'starting' | 'waking' | 'offline' | 'missing'
 
+/** `system` follows macOS; the other two pin the app's appearance. */
+export type ThemePreference = 'system' | 'light' | 'dark'
+
 /** Live state of the local Ollama process and the configured model. */
 export interface EngineStatus {
   state: EngineState
@@ -60,6 +63,8 @@ export interface SystemStats {
 }
 
 export interface Settings {
+  /** Appearance of every Lux window and native control. */
+  theme: ThemePreference
   model: string
   embeddingModel: string
   /** Optional second model. It is never loaded unless a task explicitly asks for it. */
