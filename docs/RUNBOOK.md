@@ -31,7 +31,7 @@ The welcome window's *Re-check* button refreshes the statuses.
 | Unit tests | `npm test` | 103 passing (no network or macOS permissions required) |
 | Build | `npm run build` | `out/main`, `out/preload`, `out/renderer` |
 | Brain + tools | `npm run smoke -- "how's my battery?"` | tool rows, then a spoken-style answer |
-| Capability audit | `npm run audit` | 55-tool registry plus 42 live integration checks; see `logs/audit.json` |
+| Capability audit | `npm run audit` | 57-tool registry plus 42 live integration checks; see `logs/audit.json` |
 | Cancellation | `LUX_SMOKE_ABORT_MS=2000 npm run smoke -- "research this topic"` | aborts during the model call, exits 0 |
 | Packaged form gate | `"release/Lux-darwin-arm64/Lux.app/Contents/MacOS/Lux" --form-test` | denied submit click does not submit; an approved submit changes the URL |
 | Packaged research | `"release/Lux-darwin-arm64/Lux.app/Contents/MacOS/Lux" --ask "Research ..."` | one real packaged turn; inspect `logs/turns.jsonl` |

@@ -1,6 +1,6 @@
 # Tool catalog
 
-56 tools. Everything runs locally except the pages that are inherently remote (news, `web_read`,
+57 tools. Everything runs locally except the pages that are inherently remote (news, `web_read`,
 `web_search`, `research`, the agent browser and Spotify lookups). `risk: confirm` means the turn
 pauses for explicit approval.
 
@@ -55,6 +55,8 @@ pauses for explicit approval.
 | `browser_submit` | Clicks a submit control; creates an external action, so it requires approval | **confirm** |
 | `web_search` | Ranked direct web + news results with snippets; no browser window | safe |
 | `research` | 2-angle search, concurrent page extraction, numbered dossier with source URLs | safe |
+| `list_playbooks` | Lists the seed and saved procedures available for a class of task | safe |
+| `save_playbook` | Saves an approved new procedure to the data directory | **confirm** |
 | `discover_tools` | Searches the full registry and returns schemas that were not shortlisted | safe |
 | `consult_specialist` | One bounded call to the optional specialist model; releases it afterward | safe |
 | `web_read` | Fetches a public page and returns readable text, no session | safe |

@@ -1,0 +1,10 @@
+node_modules
+out
+release
+dist
+coverage
+.evals
+native
+resources
+docs/benchmarks
+package-lock.json

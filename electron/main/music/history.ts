@@ -146,7 +146,7 @@ export function readPlayHistory(): HistoryEntry[] {
   if (!existsSync(base)) return []
 
   const counts = new Map<string, HistoryEntry>()
-  let users: string[] = []
+  let users: string[]
   try {
     users = readdirSync(base, { withFileTypes: true })
       .filter((entry) => entry.isDirectory())
@@ -158,7 +158,7 @@ export function readPlayHistory(): HistoryEntry[] {
   for (const userDir of users) {
     const file = join(userDir, 'list_player_play_history')
     if (!existsSync(file)) continue
-    let text = ''
+    let text: string
     try {
       // latin1 keeps every byte and lets the URI regex work on binary safely.
       text = readFileSync(file, 'latin1')

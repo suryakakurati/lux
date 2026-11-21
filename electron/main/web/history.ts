@@ -181,7 +181,7 @@ export async function topSites(limit = 12): Promise<HistoryHit[]> {
   // rather than twelve tabs from the same portal.
   const bySite = new Map<string, HistoryHit>()
   for (const hit of rows) {
-    let site = hit.url
+    let site: string
     try {
       site = new URL(hit.url).hostname.replace(/^www\./, '')
     } catch {

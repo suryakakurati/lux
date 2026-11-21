@@ -108,6 +108,8 @@ the guarantee the onboarding screen makes.
 
 ## ADR-011 — Sentinel instrument UI, one ion signal
 
+**Superseded by ADR-013.**
+
 **Decision.** Replace the light rose/porcelain workspace with a near-black instrument panel: a glass
 console rail, one ion-cyan accent, mono telemetry, a CSS reactor mark and short mechanical motion.
 Amber means the engine is starting or waking; coral means a failure or an approval gate.
@@ -134,3 +136,63 @@ Recovering automatically makes the local-only guarantee usable without a manual 
 **Limits.** Only a loopback `ollamaUrl` is started; a remote URL is reported, never relaunched. Lux
 does not pull models automatically because that can be a multi-gigabyte surprise. It never falls back
 to a hosted model.
+
+## ADR-013 — Calm native utility UI, not an instrument panel
+
+**Decision.** Replace Sentinel with a neutral, system-typed desktop utility: light and dark themes
+following macOS, a solid conversation sidebar, plain reply text, one blue accent for primary actions
+and focus, a quiet expandable tool trace, and a compact 400×132 HUD. No reactor, glow, gradients,
+scan lines or decorative animation.
+
+**Why.** The agent's work is text and tool steps. Sentinel made the chrome louder than the answer and
+read as generated decoration. A native utility is easier to read for long sessions, respects system
+appearance and accessibility settings, and stops encoding state in ornament. Motion is now limited to
+state changes of 120–160 ms and honours `prefers-reduced-motion`.
+
+**Rejected.** Native vibrancy across the window (text contrast becomes unpredictable over the
+desktop), an in-app theme switch (macOS already owns appearance), keeping the reactor as a brand mark
+(decorative motion without information).
+
+**Consequence.** Screenshots and UI copy are part of the review surface. `LUX_SHOT`, `LUX_SHOT_HUD`,
+`LUX_SHOT_SETTINGS` and `LUX_THEME` make the real windows capturable without taking over the screen.
+
+## ADR-014 — Deterministic plans and playbooks instead of more intent regexes
+
+**Decision.** A cheap deterministic planner produces a short plan with accepted tools and a
+definition of done. Retrieval selects one or two human-readable playbooks. Verification, one repair
+and the citation check are pure functions in `shared/plan.ts`.
+
+**Why.** A small local model needs structure to plan and recover, but adding a regex per request does
+not generalise and cannot be tested against new phrasing. A plan is data: it can be verified against
+tool evidence, repaired with a different tool, and shared by a playbook. The model still writes the
+answer; code owns progress. Trivial requests skip planning, so the fast path stays fast.
+
+**Rejected.** A second model call to plan every turn (cost and latency), per-task routing rules
+(does not transfer), letting the model decide when it is done (it cannot reliably tell “finished”
+from “said it would finish”).
+
+## ADR-015 — One envelope for every tool result, and background jobs
+
+**Decision.** Tool results are normalised to `ok`, `data`, `truncated`, `next_hint` and `error_kind`
+(`unknown_tool`, `invalid_args`, `denied`, `timeout`, `failed`). Long work can run as a background
+job through a single `job` tool.
+
+**Why.** The loop needs to choose retry, replan or ask without parsing tool-specific prose. A stable
+envelope makes that decision testable and keeps truncation visible. Jobs exist because a 240-second
+turn budget should not be the limit for a long read; a job keeps the nested tool's validation,
+approval and timeout, so it is not a bypass.
+
+**Rejected.** Per-tool error strings parsed by pattern (brittle), a general shell-backed job runner
+(would bypass the approval layer).
+
+## ADR-016 — Pin TypeScript 6.x for the lint toolchain
+
+**Decision.** The project compiles and typechecks with TypeScript 6.0.3, not 7.0.
+
+**Why.** `typescript-eslint` refuses to load on TypeScript 7 at import time. The whole codebase
+typechecks cleanly on 6.0.3, so pinning the compiler keeps a real lint pipeline (including
+React hooks rules) instead of dropping linting or patching a dependency. Revisit when
+`typescript-eslint` supports TS 7.
+
+**Consequence.** Bumping the TypeScript major requires verifying `npm run typecheck` and
+`npm run lint` together.

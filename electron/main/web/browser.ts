@@ -86,7 +86,7 @@ function snapshotScript(includeStructure: boolean): string {
     .filter((rows) => rows.some((row) => row.length > 1))` : `[]`}
   const pagination = [...document.querySelectorAll('a[href]')]
     .filter(visible)
-    .filter((anchor) => /next|previous|prev|older|newer|more|page/i.test(clean(anchor.innerText)) || /[?&](page|p|offset)=\d/i.test(anchor.href))
+    .filter((anchor) => /next|previous|prev|older|newer|more|page/i.test(clean(anchor.innerText)) || /[?&](page|p|offset)=\\d/i.test(anchor.href))
     .slice(0, 10)
     .map((anchor) => ({ text: clean(anchor.innerText).slice(0, 60), href: anchor.href }))
   return {
@@ -349,7 +349,7 @@ export async function describeClickTarget(options: {
       const inlineJavaScript = element.hasAttribute('onclick') ||
         rawHref.toLowerCase().startsWith('javascript:')
       const plainLink = element.tagName === 'A' &&
-        /^https?:\/\//i.test(absoluteHref) &&
+        /^https?:\\/\\//i.test(absoluteHref) &&
         !rawHref.startsWith('#') &&
         !rawHref.toLowerCase().startsWith('javascript:')
       if (submitsForm) return { submitsForm: true, requiresConfirmation: true, reason: 'a native form submit control' }

@@ -45,7 +45,7 @@ export function validateArgs(params: ToolParams, raw: unknown): ValidationResult
 
   for (const [name, spec] of Object.entries(params.properties)) {
     const present = Object.prototype.hasOwnProperty.call(input, name)
-    let value = input[name]
+    const value = input[name]
 
     if (!present || value === null || value === '') {
       const required = params.required?.includes(name) ?? false

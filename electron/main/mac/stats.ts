@@ -1,3 +1,4 @@
+import { cpus, homedir, loadavg, totalmem } from 'node:os'
 import type { SystemStats } from '../../../shared/types'
 import { exec } from './exec'
 
@@ -48,17 +49,14 @@ async function memInfo(): Promise<{ usedGb: number; totalGb: number; percent: nu
 }
 
 function totalMemory(): number {
-  const { totalmem } = require('node:os') as typeof import('node:os')
   return totalmem()
 }
 
 function cpuCount(): number {
-  const { cpus } = require('node:os') as typeof import('node:os')
   return cpus().length
 }
 
 function loadAverage(): number {
-  const { loadavg } = require('node:os') as typeof import('node:os')
   return loadavg()[0] ?? 0
 }
 
@@ -102,7 +100,7 @@ export async function frontmostApp(): Promise<string | undefined> {
 }
 
 export function expandHome(path: string): string {
-  if (path === '~') return require('node:os').homedir() as string
-  if (path.startsWith('~/')) return `${require('node:os').homedir()}${path.slice(1)}`
+  if (path === '~') return homedir()
+  if (path.startsWith('~/')) return `${homedir()}${path.slice(1)}`
   return path
 }

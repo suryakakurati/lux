@@ -97,7 +97,7 @@ function bestSiteHit(
   const ranked: RankedSite[] = []
 
   for (const hit of hits) {
-    let url = hit.url
+    let url: string
     try {
       const parsed = new URL(hit.url)
       parsed.hash = ''

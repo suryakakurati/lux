@@ -1,154 +1,161 @@
 # Architecture
 
 Lux is one Electron app with a strict split: pure policy in `shared/`, macOS and Electron effects in
-`electron/main/`, and the interface in `src/`. The split exists so the awkward decisions — name
-matching, queue advancement, stall detection, repeat calls — can be tested without a model, a
+`electron/main/`, and the interface in `src/`. The split exists so the awkward decisions — planning,
+name matching, queue advancement, citation checks, repeat calls — can be tested without a model, a
 browser or Spotify running.
+
+## Processes and windows
+
+```
+native/hotkey (Swift, CGEventTap, listen-only)
+        │ NDJSON: down / up / chat
+        ▼
+Electron main
+  ├── Session ────────────── conversation state, turn pipeline, commitments, brief delivery
+  ├── EngineSupervisor ───── starts and watches Ollama, publishes engine state
+  ├── Agent loop ─────────── planner, shortlist, stream, tools, verification
+  ├── Tool registry ──────── validation, approval, timeout, 57 tools
+  ├── Background jobs ────── detached work with progress and cancellation
+  ├── Memory ─────────────── lexical recall by default; semantic opt-in
+  └── STT ────────────────── whisper-cli → whisper → mlx
+        │
+        ├──▶ HUD window        (hold right ⌥, never focused)
+        └──▶ Chat window       (⇧ + right ⌥)
+```
+
+The renderer never talks to Node directly. A preload script exposes a fixed `window.lux` bridge of
+typed methods and one event stream; every window is sandboxed.
 
 ## The turn
 
 ```
-right ⌥ / chat
-   │
-   ▼
 Session.turn()                          electron/main/session.ts
-   │  waits for EngineSupervisor.ensure(), records the user item,
-   │  builds a per-turn hint, broadcasts HUD state
+   │  records the user item, captures commitments, builds machine context
    ▼
 runAgent()                              electron/main/agent/agent.ts
-   │  ┌─ shortlistTools(request)        shared/tool-router.ts
-   │  ├─ TaskStateStore.begin()        electron/main/agent/task-state.ts
-   │  ├─ ModelManager.prepare()        electron/main/agent/model-manager.ts
-   │  ├─ buildSystemPrompt(context)     electron/main/agent/prompt.ts
-   │  ├─ streamChat(ollama)             electron/main/agent/ollama.ts
-   │  ├─ ToolCallAccumulator            electron/main/agent/accumulator.ts
-   │  ├─ repeatDecision(previous)       electron/main/agent/tool-policy.ts
-   │  ├─ executeTool(name, args)        electron/main/tools/index.ts
-   │  ├─ mapLimit(3) for read-only calls shared/concurrency.ts
-   │  └─ TurnTrace.finish()             electron/main/agent/trace.ts
+   │  ┌─ planForTurn(objective, tools, playbooks)   shared/planner.ts
+   │  ├─ bestPlaybook(goal, playbooks)              shared/playbooks.ts
+   │  ├─ shortlist by description                   shared/tool-router.ts
+   │  ├─ prefetch safe zero-argument reads          shared/plan.ts
+   │  ├─ TaskStateStore.begin()                     agent/task-state.ts
+   │  ├─ EngineSupervisor.ensure()                  agent/engine.ts
+   │  ├─ ModelManager.prepare()                     agent/model-manager.ts
+   │  ├─ buildSystemPrompt(context)                 agent/prompt.ts
+   │  ├─ streamChat(ollama)                         agent/ollama.ts
+   │  ├─ executeTool(name, args)                    tools/index.ts
+   │  ├─ successEnvelope / failureEnvelope          shared/tool-envelope.ts
+   │  ├─ verifyPlan / replanPlan                    shared/plan.ts
+   │  └─ TurnTrace.finish()                         agent/trace.ts
    ▼
-Session routes the reply to the HUD or the chat window, speaks it if requested,
-records the exchange in memory, and persists the conversation.
+Session routes the reply to the HUD or chat, speaks it, records memory, persists the conversation.
 ```
 
-The loop owns an objective and a budget (16 rounds, 240 s). A reply that announces work instead of
-doing it is nudged to continue; the deferred draft is discarded so the model does not read its own
-excuse back. A turn that runs out of budget keeps its objective for the next turn. The objective,
-plan, completed steps, URLs and failures are written to `data/tasks.json` after each tool; a compact
-copy is re-injected into the prompt, so the model does not need the whole transcript to stay oriented.
-Task state is not a second agent loop: it is a small durable record used by the same loop.
+Budget: 16 tool rounds and 240 s for an ordinary turn; a research plan gets 8 rounds and 600 s. The
+final allowed round closes the toolbox and forces an answer. A turn that runs out of budget hands its
+objective to the next one.
 
-Independent read-only tools (`parallelSafe`) are grouped and run with a ceiling of three. A click,
-a form submission, a confirmation or any call that depends on the previous result runs alone.
-Transient network-shaped failures receive exactly one retry; validated failures return to the model
-as content so it can change approach.
+## Planning and verification
+
+`shared/planner.ts` builds a plan without a model: it splits the request into clauses, ranks tools by
+description overlap and playbook affinity, and emits steps with accepted tools and a definition of
+done. `shared/plan.ts` owns verification:
+
+- `stepSatisfied` checks the evidence a step expected (a matching tool call, a URL, a minimum answer
+  length).
+- `stepFailed` identifies a step that is blocked rather than merely unstarted.
+- `verifyPlan` returns the open and failed steps.
+- `replanPlan` repairs one blocked step with an alternative tool instead of retrying it.
+- `answerGap` rejects a final answer that does not cover required steps or required citations.
+
+Trivial requests skip the plan entirely. The planner is deterministic so it can be tested without a
+model (`tests/planner.test.ts`, `tests/plan.test.ts`).
+
+## Playbooks
+
+`playbooks/*.json` are human-readable procedures. `shared/playbooks.ts` validates them and ranks them
+against the request; `electron/main/agent/playbooks.ts` loads the directory and stores approved new
+drafts. Only the best one or two are injected, and only their steps — not the whole library.
+
+A playbook has an id, title, description, keywords, examples, optional citation requirements and
+steps. A step names a kind (`gather`, `verify`, `act`, `answer`), an accepted tool set, and whether
+evidence is required. See `docs/AGENT.md` for the schema.
+
+## Tools
+
+Every tool is a `ToolDef` with a JSON-Schema subset, a risk level and an optional timeout.
+`executeTool` wraps every call:
+
+1. `validateArgs` rejects unknown or invalid arguments.
+2. `risk: 'confirm'` asks the person; a refusal is final and is reported to the model.
+3. The call runs under a hard timeout (60 s by default).
+4. A thrown error becomes an error value, never a broken turn.
+5. Results are normalised into an envelope:
+
+```ts
+{
+  ok: boolean
+  data: string
+  truncated: boolean
+  next_hint?: string
+  error_kind?: 'unknown_tool' | 'invalid_args' | 'denied' | 'timeout' | 'failed'
+}
+```
+
+The loop uses `error_kind` and `next_hint` to decide whether to retry once, replan, or ask. Read-only
+tools marked `parallelSafe` run in batches of three; confirmations and dependent actions stay
+sequential.
+
+`discover_tools` exposes the full registry on demand, so the shortlist never hides a capability.
+
+## Background jobs
+
+`electron/main/jobs.ts` runs detached work with an id, progress, a result and a cancel function. The
+`jobs` tool starts, lists, inspects and cancels them; completion is reported as a notification and
+appears in the conversation. A job is for work that would otherwise hold a turn at its time limit,
+not a second agent loop.
+
+## Memory and proactivity
+
+Explicit facts and a rolling exchange log are stored in `data/memory.json`. Recall is lexical by
+default; semantic recall uses `nomic-embed-text` only when enabled, because it competes for unified
+memory on a 16 GB machine.
+
+Commitments are captured by rule from explicit first-person language, with parsed due dates and
+deduplication. The 30-second scheduler delivers a deterministic morning brief at the configured time,
+respects quiet hours, skips during a running turn and records delivery in `data/proactive.json`. It
+never calls a model.
 
 ## Modules
 
 | Path | Responsibility |
 | --- | --- |
-| `shared/` | Pure logic with no Electron import: matching, queue decisions, completion classification, routing, validation, commitment dates and brief composition, types |
-| `electron/main/index.ts` | App lifecycle, windows, protocol, shortcuts, tray, `--ask`, `LUX_SHOT` |
-| `electron/main/session.ts` | Conversation state, turn pipeline, commitment capture, brief delivery, confirmation prompts, persistence |
-| `electron/main/commitments.ts` | Durable JSON ledger and item lookup |
-| `electron/main/proactive.ts` | 30 s quiet-hours-aware brief and due-reminder scheduler; no model |
-| `electron/main/agent/` | Loop and helpers: prompt, streaming client, accumulator, repeat/retry policy, trace, lexical/semantic memory, task state, model lifecycle, Ollama process supervision, refusal detection |
-| `electron/main/agent/engine.ts` | Starts Ollama when it is down, waits for the API, warms the configured model, polls and re-checks after sleep; publishes engine state to the renderer |
-| `electron/main/tools/` | The 55 tool definitions; `index.ts` validates, confirms and time-limits calls; `discover_tools` exposes the rest on demand |
-| `electron/main/research.ts`, `web/search.ts`, `web/cache.ts` | Multi-query research, two-provider ranked search, bounded fetches and TTL caches |
-| `electron/main/music/` | Spotify: rendered search, play history and name cache, resolver, Web API client, player wrappers |
-| `electron/main/music-queue.ts` | Watches playback and advances the local queue |
-| `electron/main/web/` | Lux's Chromium window, public page reader, browser history |
-| `electron/main/mac/` | Small macOS primitives: `exec`, AppleScript, SQLite copies, stats, text search |
-| `src/` | React renderer: chat, HUD, onboarding, styles |
+| `shared/` | Pure logic: planning, playbooks, tool ranking, envelopes, citations, routing, validation, commitment dates, benchmark checks |
+| `electron/main/index.ts` | App lifecycle, windows, protocol, shortcuts, tray, `--ask`, capture hooks |
+| `electron/main/session.ts` | Conversation state, turn pipeline, commitments, brief delivery, approvals, persistence |
+| `electron/main/agent/` | Loop, prompt, streaming client, engine supervision, model lifecycle, memory, task state, playbooks, trace |
+| `electron/main/tools/` | Tool definitions and the execution wrapper |
+| `electron/main/jobs.ts` | Background job registry |
+| `electron/main/research.ts`, `web/` | Research dossiers, ranked search, page reading, browser window and history |
+| `electron/main/music/` | Spotify resolution, history, optional Web API, player wrappers |
+| `electron/main/mac/` | Small macOS primitives: exec, AppleScript, SQLite copies, stats, text search |
+| `src/` | React renderer: chat, HUD, onboarding, design tokens and styles |
+| `evals/` | Deterministic multi-step agent cases |
+| `playbooks/` | Seed procedures |
 
-## Tool execution contract
+## Storage
 
-A tool returns content, a one-line summary and optionally `openChat`. Errors are values, not
-exceptions, so the model can read the failure and change course. Every call is wrapped by
-`executeTool`:
-
-1. `validateArgs` against the tool's JSON Schema subset.
-2. If `risk === 'confirm'`, ask the person and stop on refusal. `browser_submit` uses this gate too.
-3. Run with a hard timeout (60 s by default, `timeoutMs` per tool). A timeout returns an error
-   result instead of freezing the turn.
-4. Convert a thrown error into an error result.
-5. In the agent loop, execute `parallelSafe` calls with `mapLimit(..., 3)`; never parallelise a
-   confirmation or a dependent browser action.
-
-Adding a tool: create a `ToolDef` in the relevant module under `electron/main/tools/`, export it from
-that module's array, keep the description imperative, and set `risk: 'confirm'` if it is
-irreversible. `tools/index.ts` picks it up automatically; `npm run audit` should gain a case.
-
-## Music resolution
-
-## Model lifecycle on 16 GB
-
-`agent/engine.ts` owns the process around the model: it starts Ollama after a cold boot or a long
-sleep, waits for `/api/tags`, and preloads the configured model with an empty `/api/generate` so the
-first question is not a cold load. It polls every 20 s, repeats on `powerMonitor` resume/unlock, and
-never touches a non-loopback URL.
-
-`agent/model-manager.ts` assumes one working chat model. `/api/ps` is checked once at startup
-(and at most once a minute before a turn), a replaced chat model is released, and the configured
-primary model is kept warm with the keep-alive from Settings. Lexical memory is the default, so
-`nomic-embed-text` is not loaded unless semantic recall is explicitly enabled. A configured
-specialist is only reachable through `consult_specialist`, is refused when system memory is above
-90%, and is released in a `finally` block. No background model inference runs.
-
-The settings that matter are all in Settings → Model: primary model, optional specialist, context
-window, max output tokens and keep-alive. A smaller context is the first thing to try if the Air is
-under memory pressure; a larger one costs KV cache and does not make the model faster.
-
-`music/resolve.ts` is the policy; the sources are injectable by module boundary:
-
-```
-direct URI → cache → play history → rendered Spotify search → Web API → failure
-```
-
-- `music/web-search.ts` owns one hidden `BrowserWindow`, serialises searches through a promise
-  queue, extracts `/track/<id>` anchors after hydration, and remembers results for the session.
-- `music/history.ts` reads Spotify's binary play history and names URIs from public embed pages,
-  caching for 30 days.
-- `music/spotify-api.ts` is optional and reports Spotify's own reason (`premium-required`,
-  `forbidden`, `rate-limited`, …).
-- `music/player.ts` isolates the AppleScript surface. New Spotify commands belong there, not in a
-  tool.
-
-`shared/music-queue.ts` decides what the watcher does; `music-queue.ts` performs it. The pure side
-encodes end-of-track, mid-track pause, forward/backward skip, autoplay stray, cold start and ads.
-
-## Debugging
-
-| What | Where |
-| --- | --- |
-| Human log | `~/Library/Application Support/Lux/logs/lux.log` |
-| Per-turn structured trace | `.../logs/turns.jsonl` (rotates at 2 MB) |
-| Capability report | `.../logs/audit.json`, or `npm run audit` |
-| One tool, real machine | `LUX_SMOKE_TOOL=play_music LUX_SMOKE_ARGS='{"tracks":"…"}' npm run smoke` |
-| One model turn | `npm run smoke -- "play Heat Waves and Bones"` |
-| Packaged one turn | `release/…/Lux.app/Contents/MacOS/Lux --ask "…"` |
-| UI capture | `LUX_SHOT=/tmp/lux.png npx electron out/main/index.js` |
-| Morning brief now | `LUX_BRIEF_NOW=1 npx electron out/main/index.js` |
-| HUD brief capture | `LUX_SHOT_HUD=/tmp/lux-brief.png npx electron out/main/index.js` |
-
-An unlisted tool called by the model still executes; the log records it as `unlisted tool called`.
-That is deliberate: tool routing is an optimisation, never a permission boundary.
-
-## Commitments
-
-Commitment capture and delivery are deterministic by design. `shared/commitments.ts` owns the
-rules: explicit first-person patterns, negation and question rejection, duplicate keys, due-date
-parsing, quiet hours and the once-a-day brief window. `electron/main/commitments.ts` is only
-persistence and lookup. The model can read and edit the ledger through the `commitments` tool, but
-it does not decide what gets captured. `Proactive` wakes every 30 seconds, skips while a turn is
-running, and records the delivered local day in `data/proactive.json` so a restart cannot repeat
-the brief. The design adds no model or embedding work, which keeps it comfortable on a 16 GB M4.
+All state is atomic JSON under `~/Library/Application Support/Lux/data/` (or `LUX_DATA_DIR`). Writes go
+through a temporary file and rename. Conversations are capped at 40; a conversation holds at most 400
+items. There is no database migration step.
 
 ## Invariants
 
-- Web pages, notes, database rows, clipboard contents and track names are data, never instructions.
-- Playback and reading are separate tools; reading history must never start music.
-- Secrets stay in `data/settings.json` (or the environment) and never enter the prompt, logs or
+- Pages, notes, database rows, clipboard text and track names are data, never instructions.
+- Reading playback history must never start playback.
+- Secrets stay in `data/settings.json` or the environment; they never enter the prompt, logs or
   renderer.
 - A failure names the step that blocked it. It never claims a capability gap that a tool covers.
+- No code path contacts a hosted model.
+
+See `docs/AGENT.md` for the loop in detail and `docs/SECURITY.md` for the controls.

@@ -113,7 +113,7 @@ export async function streamChat(options: ChatOptions): Promise<AsyncGenerator<S
       cancelled.name = 'AbortError'
       throw cancelled
     }
-    throw new Error(explainFetchError(error, options.url))
+    throw new Error(explainFetchError(error, options.url), { cause: error })
   }
 
   if (!response.ok || !response.body) {
