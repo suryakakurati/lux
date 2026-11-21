@@ -31,7 +31,9 @@ export const DEFAULT_SETTINGS: Settings = {
   embeddingModel: 'nomic-embed-text:latest',
   specializedModel: '',
   ollamaUrl: 'http://127.0.0.1:11434',
-  contextWindow: 8192,
+  // 16K is the smallest window that holds the system prompt, a few tool
+  // results and a real conversation. 8K left no room for history on research.
+  contextWindow: 16384,
   maxOutputTokens: 1536,
   modelKeepAlive: '30m',
   memoryMode: 'lexical',
@@ -80,6 +82,10 @@ export function getSettings(): Settings {
     ...stored,
     focusPresets: { ...DEFAULT_PRESETS, ...(stored.focusPresets ?? {}) }
   }
+  // 8,192 was the old fixed default, and a stored 8,192 is far more likely to
+  // be that default than a considered choice. It leaves no room for history on
+  // a tool-heavy turn, so a legacy value moves up to the current default once.
+  if (stored.contextWindow === 8_192) merged.contextWindow = DEFAULT_SETTINGS.contextWindow
   if (!merged.notesDir) merged.notesDir = defaultNotesDir()
   // Use the vault Obsidian already has open unless the person set one explicitly.
   if (!merged.vaultPath) merged.vaultPath = detectObsidianVault()
@@ -90,7 +96,7 @@ export function saveSettings(patch: Partial<Settings>): Settings {
   if (!settingsStore) settingsStore = new Store<Settings>(join(dataDir(), 'settings.json'), DEFAULT_SETTINGS)
   const next: Settings = { ...getSettings(), ...patch }
   if (next.openChatThreshold < 40) next.openChatThreshold = 40
-  next.contextWindow = Math.min(32_768, Math.max(2_048, Number(next.contextWindow) || 8_192))
+  next.contextWindow = Math.min(65_536, Math.max(2_048, Number(next.contextWindow) || 16_384))
   next.maxOutputTokens = Math.min(8_192, Math.max(256, Number(next.maxOutputTokens) || 1_536))
   if (!next.modelKeepAlive.trim()) next.modelKeepAlive = '30m'
   if (next.theme !== 'light' && next.theme !== 'dark') next.theme = 'system'

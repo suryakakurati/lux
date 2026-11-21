@@ -122,13 +122,11 @@ export async function runAgent(input: AgentInput): Promise<AgentOutcome> {
   const tools = shortlistTools(`${objective} ${input.turnHint ?? ''} ${input.openTask ?? ''}`, allTools, 8)
   const playbooks = listPlaybooks()
   let plan = planForTurn(objective, tools, playbooks)
-  // A plan with no action is answered from context. Only discovery stays on the
-  // table, so an unexpected need can still escalate without inviting a tool
-  // lookup for a question the context already answers.
-  const answerOnly = plan.steps.length === 1 && plan.steps[0].kind === 'answer'
-  const offered = answerOnly
-    ? tools.filter((tool) => tool.function.name === 'discover_tools')
-    : tools
+  // The shortlist is an optimisation, never a decision about what the turn is
+  // allowed to do. Hiding every schema behind discover_tools turned one lexical
+  // miss in the planner into an answer of "I can't": the model had nothing to
+  // call and no way to know the capability existed.
+  const offered = tools
   const task = input.taskState
   task?.plan(plan.steps.map((step) => step.title))
   const actionable =
@@ -196,7 +194,7 @@ export async function runAgent(input: AgentInput): Promise<AgentOutcome> {
     }
   }
   const contextCharsBudget = contextBudgetChars(
-    input.settings.contextWindow || 8_192,
+    input.settings.contextWindow || 16_384,
     input.settings.maxOutputTokens || 1_536
   )
   const startedAt = Date.now()
@@ -215,7 +213,6 @@ export async function runAgent(input: AgentInput): Promise<AgentOutcome> {
   let replanned = false
   let toolUnavailable = false
   let planNudges = 0
-  let answerOnlyNudges = 0
   let citationNudges = 0
   let nudges = 0
   let lastToolName = ''
@@ -242,10 +239,9 @@ export async function runAgent(input: AgentInput): Promise<AgentOutcome> {
     'now_playing'
   ])
   const prefetchedTools = new Set<string>()
-  const prefetchSteps =
-    plan.allowQuestion || answerOnly
-      ? []
-      : plan.steps
+  const prefetchSteps = plan.allowQuestion
+    ? []
+    : plan.steps
           .filter((step) => {
             if (step.kind === 'answer' || step.kind === 'clarify' || step.optional) return false
             if (!step.tool || !PREFETCHABLE.has(step.tool) || prefetchedTools.has(step.tool)) return false
@@ -324,7 +320,7 @@ export async function runAgent(input: AgentInput): Promise<AgentOutcome> {
           label: lastSummary || lastToolName || 'thinking'
         })
       }
-      const closedByPrefetch = prefetchedComplete && round === 0 && !answerOnly
+      const closedByPrefetch = prefetchedComplete && round === 0
       if (closedByPrefetch) {
         messages.push({
           role: 'system',
@@ -336,10 +332,10 @@ export async function runAgent(input: AgentInput): Promise<AgentOutcome> {
 
       const modelOptions = input.models?.chatOptions() ?? {
         keepAlive: input.settings.keepModelLoaded ? input.settings.modelKeepAlive || '30m' : '0',
-        numCtx: input.settings.contextWindow || 8_192,
+        numCtx: input.settings.contextWindow || 16_384,
         numPredict: input.settings.maxOutputTokens || 1_536
       }
-      if (finalRound && !answerOnly) {
+      if (finalRound) {
         const urls = evidence.urls.slice(0, 8).join('\n')
         messages.push({
           role: 'system',
@@ -399,28 +395,6 @@ export async function runAgent(input: AgentInput): Promise<AgentOutcome> {
       )
 
       const calls = accumulator.finish()
-
-      // The plan needs no action and no schemas were offered. A tool call here
-      // is a habit, not information: asking for the direct answer is cheaper
-      // and more correct than executing a timer lookup for "what time is it".
-      if (answerOnly && calls.length > 0) {
-        if (answerOnlyNudges < 1 && round < roundLimit - 1) {
-          answerOnlyNudges += 1
-          trace.nudge(`answer-only: ignored ${calls[0].name}`)
-          task?.note(`answered from context; ignored an unnecessary ${calls[0].name} call`)
-          messages.push({
-            role: 'user',
-            content:
-              'This request is answered from the context already in this conversation. Do not call a tool. Answer now in one or two sentences.'
-          })
-          input.emit({ type: 'replace', text: '' })
-          continue
-        }
-        finalText =
-          roundText.trim() ||
-          'I have what I need in the current context, but I could not put it into an answer. Ask me again and I will keep it to the context.'
-        break
-      }
 
       if (calls.length === 0) {
         const reply = roundText.trim()

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { focusQuery, parseRss, rankHits } from '../electron/main/web/search.ts'
+import { focusQuery, parseBrave, parseRss, rankHits } from '../electron/main/web/search.ts'
 
 test('RSS items become clean, deduplicated search hits', () => {
   const xml = `<?xml version="1.0"?><rss><channel>
@@ -51,6 +51,42 @@ test('relevance ranking drops unrelated homepages and keeps the question terms',
     ranked.map((hit) => hit.url),
     ['https://example.com/local-ai-models', 'https://news.google.com/rss/articles/x']
   )
+})
+
+test('Brave result markup becomes clean hits and skips other verticals', () => {
+  const html = `
+    <div class="snippet svelte-a" data-pos="1" data-type="web"><a href="https://genius.com/bts-dynamite-lyrics"><div class="title desktop-default-regular">BTS – Dynamite (English Translation) | Genius</div></a><div class="description t-secondary">English translation of the Korean verses.</div></div>
+    <div class="snippet svelte-a" data-pos="2" data-type="web"><a href="https://lyricstranslate.com/en/bts-dynamite.html"><div class="title">Dynamite lyrics translation</div></a></div>
+    <div class="snippet svelte-a" data-pos="3" data-type="web"><a href="https://search.brave.com/redirect"><div class="title">Brave redirect</div></a></div>
+    <div class="snippet svelte-a" data-pos="4" data-type="video"><a href="https://www.youtube.com/watch?v=1"><div class="title">A video</div></a></div>`
+  const hits = parseBrave(html, 8)
+  assert.deepEqual(
+    hits.map((hit) => hit.url),
+    ['https://genius.com/bts-dynamite-lyrics', 'https://lyricstranslate.com/en/bts-dynamite.html']
+  )
+  assert.equal(hits[0].title, 'BTS – Dynamite (English Translation) | Genius')
+  assert.match(hits[0].snippet, /English translation/)
+})
+
+test('Brave results keep their relevance order ahead of RSS results', () => {
+  const ranked = rankHits(
+    [
+      {
+        title: 'Dynamite (English Translation) — LyricsTranslate',
+        url: 'https://lyricstranslate.com/en/dynamite.html',
+        snippet: 'English translation lyrics for Dynamite.',
+        provider: 'web'
+      },
+      {
+        title: 'Dynamite Official Website | Clothing',
+        url: 'https://dynamiteclothing.com/',
+        snippet: 'Shop the collection.',
+        provider: 'web'
+      }
+    ],
+    'Dynamite english translation lyrics'
+  )
+  assert.equal(ranked[0].url, 'https://lyricstranslate.com/en/dynamite.html')
 })
 
 test('a drifted natural-language query gets a focused topic phrase', () => {

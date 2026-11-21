@@ -26,11 +26,30 @@ const STOP = new Set([
   'our', 'not', 'but', 'then', 'than', 'too', 'very', 'also', 'use', 'using', 'make',
   'mac', 'lux', 'thing', 'things', 'stuff', 'something', 'anything', 'much', 'many',
   // "right now" must not select now_playing, and "time" is not a capability.
-  'time', 'right'
+  'time', 'right',
+  // Generic request verbs are not capabilities. Leaving them in made "find the
+  // english lyrics translation" a mandatory find_files step.
+  'find', 'get', 'tell', 'show', 'check', 'look', 'see', 'give', 'know', 'let'
 ])
 
 /** Always offered: the tools that answer "what is going on" cheaply. */
 const CORE = ['open_app', 'system_status', 'clipboard_read', 'discover_tools']
+
+/**
+ * When nothing in the request matches any tool, these are added rather than
+ * handing the model four machine probes. An unfamiliar phrasing must not turn
+ * into "I can't look that up".
+ */
+const GENERAL = [
+  'web_search',
+  'research',
+  'web_read',
+  'browse',
+  'browser_open',
+  'site_open',
+  'now_playing',
+  'discover_tools'
+]
 
 /**
  * Capability retrieval. These are synonyms for a need, not sentence patterns:
@@ -58,7 +77,7 @@ const ALIASES: Record<string, string[]> = {
   url: ['web_read', 'browse', 'browser_open'],
   link: ['web_read', 'browse', 'browser_open'],
   browse: ['browse', 'browser_open', 'browser_read'],
-  browser: ['browser_open', 'browser_read', 'browse', 'site_open'],
+  browser: ['browse', 'browser_open', 'browser_read', 'site_open'],
   search: ['web_search', 'browse', 'search_notes', 'history_search'],
   online: ['web_search', 'browse', 'web_read'],
   internet: ['web_search', 'browse'],
@@ -82,8 +101,35 @@ const ALIASES: Record<string, string[]> = {
   folder: ['find_files', 'open_path'],
   document: ['find_files', 'open_path'],
   pdf: ['find_files', 'open_path'],
-  find: ['find_files', 'search_notes', 'vault_search'],
   locate: ['find_files', 'open_path'],
+  // Information that lives on the web, however the request is phrased.
+  lyrics: ['web_search', 'research', 'web_read'],
+  lyric: ['web_search', 'research', 'web_read'],
+  translation: ['web_search', 'research', 'web_read'],
+  translate: ['web_search', 'research', 'web_read'],
+  meaning: ['web_search', 'research', 'web_read'],
+  definition: ['web_search', 'research', 'web_read'],
+  define: ['web_search', 'research', 'web_read'],
+  explain: ['research', 'web_search', 'web_read'],
+  wiki: ['research', 'web_search', 'web_read'],
+  wikipedia: ['research', 'web_search', 'web_read'],
+  information: ['research', 'web_search', 'web_read'],
+  info: ['research', 'web_search', 'web_read'],
+  fact: ['research', 'web_search', 'web_read'],
+  facts: ['research', 'web_search', 'web_read'],
+  lookup: ['web_search', 'research', 'web_read'],
+  google: ['browse', 'web_search'],
+  // Machine control, in the words people actually use.
+  close: ['quit_app'],
+  quit: ['quit_app'],
+  exit: ['quit_app'],
+  launch: ['open_app'],
+  start: ['open_app'],
+  firefox: ['browse'],
+  safari: ['browse'],
+  chrome: ['browse'],
+  brave: ['browse'],
+  arc: ['browse'],
   timers: ['timer'],
   timer: ['timer'],
   alarm: ['timer'],
@@ -158,12 +204,15 @@ export function shortlistTools(query: string, tools: ToolSchema[], limit = 12): 
 
   const words = [...new Set(tokens(query))]
   const chosen = new Map<string, ToolSchema>()
-
-  for (const name of CORE) {
-    if (chosen.size >= limit) break
+  /** True once the request itself selected something beyond the core probes. */
+  let matched = false
+  const add = (name: string): void => {
+    if (chosen.size >= limit) return
     const tool = tools.find((candidate) => candidate.function.name === name)
     if (tool) chosen.set(name, tool)
   }
+
+  for (const name of CORE) add(name)
 
   // A direct name match is stronger evidence than a synonym. Put those first
   // so "what's playing" still gets now_playing even when the music lexicon is
@@ -172,13 +221,14 @@ export function shortlistTools(query: string, tools: ToolSchema[], limit = 12): 
     if (chosen.size >= limit) break
     if (score < 6) break
     chosen.set(tool.function.name, tool)
+    if (!CORE.includes(tool.function.name)) matched = true
   }
 
   for (const word of words) {
     for (const name of ALIASES[word] ?? []) {
       if (chosen.size >= limit) break
-      const tool = tools.find((candidate) => candidate.function.name === name)
-      if (tool) chosen.set(name, tool)
+      add(name)
+      if (!CORE.includes(name)) matched = true
     }
   }
 
@@ -186,7 +236,12 @@ export function shortlistTools(query: string, tools: ToolSchema[], limit = 12): 
     if (chosen.size >= limit) break
     if (score <= 0) break
     chosen.set(tool.function.name, tool)
+    if (!CORE.includes(tool.function.name)) matched = true
   }
+
+  // An unfamiliar phrasing must still leave the general capabilities on the
+  // table, or a lexical miss reads as "cannot".
+  if (!matched) for (const name of GENERAL) add(name)
 
   return tools.filter((tool) => chosen.has(tool.function.name))
 }

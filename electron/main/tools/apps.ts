@@ -46,11 +46,49 @@ export const appTools: ToolDef[] = [
     },
     async run(args) {
       const name = String(args.name ?? '').trim()
-      const result = await osascript(`tell application "${quoteForAppleScript(name)}" to quit`)
-      if (result.code === 0) return { content: `Quit ${name}.`, summary: `quit ${name}` }
+      if (!name) return { content: 'Which app should I close?', summary: 'no app given' }
+
+      // Only ever touch something that is actually running: telling AppleScript
+      // to quit a closed app launches it first, which reads as the opposite of
+      // what was asked.
+      const running = await appProcesses(name)
+      if (running.length === 0) {
+        return {
+          content: `${name} is not running, so there is nothing to close.`,
+          summary: `${name} not running`,
+          openChat: false
+        }
+      }
+      const pids = [...new Set(running.map((entry) => entry.pid))]
+      const label = running[0].bundle
+
+      // The graceful path: the app runs its own quit handler and can ask to save.
+      const script = await osascript(`tell application "${quoteForAppleScript(label)}" to quit`, 6_000)
+      if (script.code === 0 && (await waitForExit(pids, 3_000))) {
+        return { content: `Closed ${label}.`, summary: `quit ${label}`, openChat: false }
+      }
+
+      // Apple Events are gated per binary by Automation, and an ad-hoc signed
+      // rebuild loses that grant. Fall back to the process we already found
+      // rather than reporting a permission that the person cannot act on.
+      for (const pid of pids) {
+        try {
+          process.kill(pid, 'SIGTERM')
+        } catch {
+          // Already gone between the ps scan and here.
+        }
+      }
+      if (await waitForExit(pids, 3_000)) {
+        return {
+          content: `Closed ${label}. It did not answer the normal quit request (macOS may have blocked Apple Events for this build), so it was asked to terminate; unsaved changes may be lost.`,
+          summary: `closed ${label}`,
+          openChat: true
+        }
+      }
       return {
-        content: `Could not quit ${name}: ${truncate(result.stderr || 'unknown error', 300)}`,
-        summary: `couldn't quit ${name}`
+        content: `Could not close ${label}${script.stderr ? `: ${truncate(script.stderr, 200)}` : '.'}`,
+        summary: `couldn't close ${label}`,
+        openChat: true
       }
     }
   },
@@ -128,6 +166,48 @@ export async function installedApps(): Promise<string[]> {
   }
   appCache = [...names].sort((a, b) => a.localeCompare(b))
   return appCache
+}
+
+/**
+ * Running GUI apps, matched by their bundle name. This is read from `ps`, so it
+ * needs no Automation or Accessibility permission to answer "is it open?".
+ */
+async function appProcesses(query: string): Promise<{ pid: number; bundle: string }[]> {
+  const wanted = query
+    .toLowerCase()
+    .replace(/\.app$/, '')
+    .replace(/[^a-z0-9]/g, '')
+  if (!wanted) return []
+  const result = await exec('/bin/ps', ['-axo', 'pid=,command='], { timeout: 4_000 })
+  if (result.code !== 0) return []
+  const matches: { pid: number; bundle: string }[] = []
+  for (const line of result.stdout.split('\n')) {
+    const parsed = /^\s*(\d+)\s+(.+)$/.exec(line)
+    if (!parsed) continue
+    const bundle = /([^/]+)\.app\/Contents\/MacOS\//.exec(parsed[2])?.[1]
+    if (!bundle || /^Lux/.test(bundle)) continue
+    if (bundle.toLowerCase().replace(/[^a-z0-9]/g, '') !== wanted) continue
+    matches.push({ pid: Number(parsed[1]), bundle })
+  }
+  return matches
+}
+
+function isAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0)
+    return true
+  } catch {
+    return false
+  }
+}
+
+async function waitForExit(pids: number[], timeoutMs: number): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs
+  while (Date.now() < deadline) {
+    if (pids.every((pid) => !isAlive(pid))) return true
+    await new Promise((resolve) => setTimeout(resolve, 150))
+  }
+  return pids.every((pid) => !isAlive(pid))
 }
 
 async function findInstalledApp(query: string): Promise<string | null> {

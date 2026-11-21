@@ -94,7 +94,7 @@ export async function streamChat(options: ChatOptions): Promise<AsyncGenerator<S
         keep_alive: options.keepAlive ?? '30m',
         options: {
           temperature: options.sampling?.temperature ?? 0.35,
-          num_ctx: options.numCtx ?? 8_192,
+          num_ctx: options.numCtx ?? 16_384,
           num_predict: options.numPredict ?? 1_536,
           ...(options.sampling?.topK !== undefined ? { top_k: options.sampling.topK } : {}),
           ...(options.sampling?.topP !== undefined ? { top_p: options.sampling.topP } : {}),

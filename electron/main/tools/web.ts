@@ -1,6 +1,18 @@
 import { exec, truncate } from '../mac/exec'
 import type { ToolDef } from './types'
 
+/** People name their browser; `/usr/bin/open` needs the app name it ships as. */
+const BROWSERS: Record<string, string> = {
+  default: '',
+  system: '',
+  firefox: 'Firefox',
+  safari: 'Safari',
+  chrome: 'Google Chrome',
+  brave: 'Brave Browser',
+  arc: 'Arc',
+  edge: 'Microsoft Edge'
+}
+
 const ENGINES: Record<string, (query: string) => string> = {
   google: (query) => `https://www.google.com/search?q=${encodeURIComponent(query)}`,
   duckduckgo: (query) => `https://duckduckgo.com/?q=${encodeURIComponent(query)}`,
@@ -14,7 +26,7 @@ export const webTools: ToolDef[] = [
   {
     name: 'browse',
     description:
-      'Open a URL in the default browser, or open a web search for a query. Use browse action=search when the person wants the browser, and web_search when you need result text in the conversation.',
+      'Open a URL in the person\u2019s real browser, or run a web search there and show it. Use this for "open …", "take me to …" and "search … for me", including a named browser (Firefox, Safari, Chrome). Use web_search instead when the answer needs result text in the conversation.',
     risk: 'safe',
     params: {
       type: 'object',
@@ -26,31 +38,44 @@ export const webTools: ToolDef[] = [
           type: 'string',
           description: 'Search engine for action=search (default google).',
           enum: ['google', 'duckduckgo', 'youtube', 'github', 'wikipedia', 'maps']
+        },
+        app: {
+          type: 'string',
+          description:
+            'Which browser to use. Omit or "default" for their default browser; pass firefox, safari, chrome, brave, arc or edge when they name one.',
+          enum: ['default', 'firefox', 'safari', 'chrome', 'brave', 'arc', 'edge']
         }
       },
       required: ['action']
     },
     async run(args) {
+      const app = String(args.app ?? 'default').toLowerCase()
       if (args.action === 'search') {
         const query = String(args.query ?? '').trim()
         if (!query) return { content: 'Give me a search query.', summary: 'empty search' }
         const engine = String(args.engine ?? 'google').toLowerCase()
         const build = ENGINES[engine] ?? ENGINES.google
-        const result = await exec('/usr/bin/open', [build(query)], { timeout: 6_000 })
-        if (result.code !== 0) {
-          return { content: `Could not open the browser: ${truncate(result.stderr, 160)}`, summary: 'search failed' }
+        const opened = await openInBrowser(build(query), app)
+        if (!opened.ok) {
+          return { content: `Could not open the browser: ${opened.detail}`, summary: 'search failed' }
         }
-        return { content: `Searched ${engine} for "${query}".`, summary: `${engine}: ${query}` }
+        return {
+          content: `Searched ${engine} for "${query}" in ${opened.browser}.`,
+          summary: `${opened.browser.toLowerCase()}: ${query}`
+        }
       }
 
       const raw = String(args.url ?? '').trim()
       if (!raw) return { content: 'Give me a URL to open.', summary: 'missing url' }
       const url = /^[a-z]+:\/\//i.test(raw) ? raw : `https://${raw}`
-      const result = await exec('/usr/bin/open', [url], { timeout: 6_000 })
-      if (result.code !== 0) {
-        return { content: `Could not open ${url}: ${truncate(result.stderr, 160)}`, summary: 'open failed' }
+      const opened = await openInBrowser(url, app)
+      if (!opened.ok) {
+        return { content: `Could not open ${url}: ${opened.detail}`, summary: 'open failed' }
       }
-      return { content: `Opened ${url}.`, summary: `open ${new URL(url).hostname}` }
+      return {
+        content: `Opened ${url} in ${opened.browser}.`,
+        summary: `open ${hostOf(url)}`
+      }
     }
   },
   {
@@ -102,6 +127,44 @@ export const webTools: ToolDef[] = [
     }
   }
 ]
+
+/**
+ * Open a URL in a named browser, falling back to the default one. Opening the
+ * wrong app is better than doing nothing visible, but the reply says which one
+ * actually opened.
+ */
+async function openInBrowser(
+  url: string,
+  app: string
+): Promise<{ ok: boolean; detail: string; browser: string }> {
+  const named = BROWSERS[app] ?? ''
+  if (!named) {
+    const result = await exec('/usr/bin/open', [url], { timeout: 6_000 })
+    if (result.code !== 0) return { ok: false, detail: truncate(result.stderr, 160), browser: 'default browser' }
+    return { ok: true, detail: '', browser: 'the default browser' }
+  }
+
+  const direct = await exec('/usr/bin/open', ['-a', named, url], { timeout: 8_000 })
+  if (direct.code === 0) return { ok: true, detail: '', browser: named }
+
+  const fallback = await exec('/usr/bin/open', [url], { timeout: 6_000 })
+  if (fallback.code === 0) {
+    return { ok: true, detail: '', browser: `the default browser (${named} could not be opened)` }
+  }
+  return {
+    ok: false,
+    detail: truncate(direct.stderr || fallback.stderr, 160),
+    browser: named
+  }
+}
+
+function hostOf(url: string): string {
+  try {
+    return new URL(url).hostname
+  } catch {
+    return url
+  }
+}
 
 function stripCdata(value: string): string {
   return value.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')

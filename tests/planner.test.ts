@@ -81,6 +81,15 @@ test('a request for sources carries a citation requirement', () => {
   assert.equal(plan.steps[0].tool, 'research')
 })
 
+test('a generic verb does not turn a lookup into a local file search', () => {
+  const plan = planForTurn(
+    'find the english lyrics translation of the current playing song',
+    TOOLS,
+    []
+  )
+  assert.equal(plan.steps.some((step) => step.tool === 'find_files'), false)
+})
+
 test('small talk gets an answer-only plan', () => {
   const plan = planForTurn('Say hello in one short sentence.', TOOLS, [])
   assert.deepEqual(plan.steps.map((step) => step.kind), ['answer'])

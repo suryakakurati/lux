@@ -31,30 +31,40 @@ const STOP = new Set([
 /**
  * Search without a browser session.
  *
- * Two providers run together: Bing's RSS endpoint gives direct, readable pages,
- * while Google News gives relevant current headlines. Bing on its own can drift
- * toward "local news" for a phrase like "local AI models", so results are ranked
- * against the actual question terms and unreadable news stubs are marked rather
- * than passed off as pages. Both are keyless public feeds.
+ * Three providers run together: Brave's HTML results are the primary index
+ * because they follow the whole query ("Dynamite BTS english translation
+ * lyrics" returns Genius and LyricsTranslate), while Bing's RSS feed is the
+ * keyless fallback and Google News supplies dated headlines. Bing on its own
+ * drifts to the first loose term — the same query used to return an
+ * encyclopedia article and a clothing shop — so its results are only used when
+ * the stronger provider is unavailable, and everything is ranked against the
+ * actual question terms.
  */
-export async function searchWeb(query: string, limit = 8): Promise<SearchResult> {
+export async function searchWeb(query: string, limit = 8, fresh = false): Promise<SearchResult> {
   const clean = query.replace(/\s+/g, ' ').trim()
   if (clean.length < 2) return { query: clean, hits: [], fetchedAt: Date.now(), cached: false }
 
   const key = `${clean.toLowerCase()}::${limit}`
-  const cached = cache.get(key)
-  if (cached) {
-    return { query: clean, hits: cached.hits, fetchedAt: cached.at, cached: true }
+  if (!fresh) {
+    const cached = cache.get(key)
+    if (cached) {
+      return { query: clean, hits: cached.hits, fetchedAt: cached.at, cached: true }
+    }
   }
 
-  const [bing, news] = await Promise.allSettled([
+  const [braveResult, bing, news] = await Promise.allSettled([
+    fetchBrave(clean, Math.min(12, Math.max(limit, 8))),
     fetchBing(clean, Math.min(20, Math.max(limit, 8))),
     fetchBingNews(clean, Math.min(limit, 8))
   ])
-  let hits: SearchHit[] = [
+  const brave = braveResult.status === 'fulfilled' ? braveResult.value : []
+  const rss = [
     ...(bing.status === 'fulfilled' ? bing.value : []),
     ...(news.status === 'fulfilled' ? news.value : [])
   ]
+  // Brave's ordering is materially better when it answers. Mixing Bing's looser
+  // matches back in pulls generic homepages into an otherwise good result set.
+  let hits: SearchHit[] = brave.length >= Math.min(4, limit) ? brave : [...brave, ...rss]
 
   // If the literal query drifted, try the topic phrase by itself. This is the
   // difference between "local news" homepages and pages about local AI models.
@@ -91,7 +101,6 @@ export function rankHits(hits: SearchHit[], query: string): SearchHit[] {
   const contentTerms = new Set(
     terms.filter((term) => !/^(latest|new|news|recent|developments?|updates?|releases?|happening|today)$/i.test(term))
   )
-  const requiresContent = contentTerms.size > 0
   const wantsNews = /\b(latest|news|recent|developments?|updates?|releases?|happening|today)\b/i.test(query)
   return dedupe(hits)
     .map((hit) => {
@@ -100,22 +109,34 @@ export function rankHits(hits: SearchHit[], query: string): SearchHit[] {
       const host = safeHost(hit.url)
       let score = hit.provider === 'web' ? 0.5 : wantsNews ? 2 : 0
       let contentMatches = 0
+      const matched = new Set<string>()
       for (const term of terms) {
         if (title.includes(term)) {
           score += 3
+          matched.add(term)
           if (contentTerms.has(term)) contentMatches += 1
         }
-        if (snippet.includes(term)) score += 1
+        if (snippet.includes(term)) {
+          score += 1
+          matched.add(term)
+          if (contentTerms.has(term)) contentMatches += 1
+        }
         if (host.includes(term)) {
           score += 1
+          matched.add(term)
           if (contentTerms.has(term)) contentMatches += 1
         }
       }
-      // A bare news homepage is not evidence about the question.
-      if (contentMatches === 0 && (requiresContent || /^\/?$/.test(safePath(hit.url)))) score = 0
+      const bareHomepage = /^\/?$/.test(safePath(hit.url))
+      // A result that shares no word with the question is not evidence, even
+      // when the provider ranked it highly. News snippets must match the topic
+      // words, not just the date words. A bare homepage is never evidence.
+      if (matched.size === 0) score = 0
+      else if (hit.provider === 'news' && contentMatches === 0) score = 0
+      else if (bareHomepage && contentMatches === 0) score = 0
       return { hit, score, contentMatches }
     })
-    .filter((item) => item.score > 0 && (!requiresContent || item.contentMatches > 0))
+    .filter((item) => item.score > 0)
     .sort((a, b) => b.score - a.score || (a.hit.provider === 'web' ? -1 : 1))
     .map((item) => item.hit)
 }
@@ -135,6 +156,73 @@ function searchTerms(text: string): string[] {
     .split(/[^a-z0-9]+/)
     .map((word) => (word.length > 4 && word.endsWith('s') ? word.slice(0, -1) : word))
     .filter((word) => word.length >= 2 && !STOP.has(word))
+}
+
+/**
+ * Brave's public HTML results need no key and follow the whole query, which is
+ * exactly where the RSS feeds fail. The parse is tolerant: an unfamiliar layout
+ * yields no hits and the RSS providers take over.
+ */
+async function fetchBrave(query: string, limit: number): Promise<SearchHit[]> {
+  const response = await fetch(
+    `https://search.brave.com/search?q=${encodeURIComponent(query)}&source=web`,
+    {
+      headers: {
+        'User-Agent': USER_AGENT,
+        Accept: 'text/html,application/xhtml+xml',
+        'Accept-Language': 'en-US,en;q=0.9'
+      },
+      signal: AbortSignal.timeout(12_000)
+    }
+  )
+  if (!response.ok) throw new Error(`brave HTTP ${response.status}`)
+  return parseBrave(await response.text(), limit)
+}
+
+/** Exported for tests: Brave result markup in, clean hits out. */
+export function parseBrave(html: string, limit = 8): SearchHit[] {
+  const hits: SearchHit[] = []
+  const seen = new Set<string>()
+  const blocks = html.split(/<div class="snippet [^"]*"\s+data-pos=/).slice(1)
+  for (const raw of blocks) {
+    const block = raw.slice(0, 12_000)
+    if (!/data-type="web"/.test(block.slice(0, 200))) continue
+    const href = /<a\b[^>]*href="(https?:\/\/[^"]+)"/.exec(block)?.[1]
+    if (!href) continue
+    let url: URL
+    try {
+      url = new URL(decodeEntities(href))
+    } catch {
+      continue
+    }
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') continue
+    if (/(^|\.)(search\.brave\.com|imgs\.search\.brave\.com)$/i.test(url.hostname)) continue
+    url.hash = ''
+    const key = url.toString()
+    if (seen.has(key)) continue
+    const title =
+      taggedText(block, 'div', 'title') ||
+      stripHtml(/<a\b[^>]*class="[^"]*\btitle\b[^"]*"[^>]*>([\s\S]*?)<\/a>/i.exec(block)?.[1] ?? '')
+    if (!title) continue
+    seen.add(key)
+    hits.push({
+      title: title.slice(0, 180),
+      url: key,
+      snippet: taggedText(block, 'div', 'description').slice(0, 360),
+      provider: 'web'
+    })
+    if (hits.length >= limit) break
+  }
+  return hits
+}
+
+/** Text of the first element with a given class, stripped of markup. */
+function taggedText(block: string, tag: string, className: string): string {
+  const pattern = new RegExp(
+    `<${tag}\\b[^>]*class="[^"]*\\b${className}\\b[^"]*"[^>]*>([\\s\\S]*?)<\\/${tag}>`,
+    'i'
+  )
+  return stripHtml(pattern.exec(block)?.[1] ?? '')
 }
 
 async function fetchBing(query: string, limit: number): Promise<SearchHit[]> {

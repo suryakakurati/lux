@@ -17,11 +17,12 @@ import { runAgent } from './agent/agent'
 import type { Memory } from './agent/memory'
 import type { ModelManager } from './agent/model-manager'
 import { TaskStateStore } from './agent/task-state'
-import { isObsoleteRefusal, needsMusicTaste, needsSiteCheck } from './agent/refusals'
+import { isObsoleteRefusal, needsMusicTaste, needsSiteCheck, needsTrackLookup } from './agent/refusals'
 import { logLine } from './log'
 import type { OllamaMessage } from './agent/ollama'
 import type { Transcriber } from './stt'
 import { Store } from './store'
+import { contextBudgetChars } from '../../shared/context'
 import type { ToolContext } from './tools/types'
 import { executeTool } from './tools'
 import { batteryInfo, frontmostApp, outputVolume, runningApps, systemStats } from './mac/stats'
@@ -313,6 +314,10 @@ export class Session {
       hints.push(
         'They are asking about their own data on a website. Call site_open with the site name first: it finds the URL from history, opens it and returns the page. Read it, then answer from what it says.'
       )
+    } else if (needsTrackLookup(text)) {
+      hints.push(
+        'This is about the track that is playing now. First call now_playing to get the exact title and artist. Then call web_search with the concrete query "<title> <artist> english translation lyrics" (or the meaning/artist/release they asked for) and read the best result with web_read. Never search for the literal words "current song", and never answer that you cannot find lyrics or a translation: a web search with the real title is the whole job.'
+      )
     } else if (needsMusicTaste(text)) {
       hints.push(
         playIntent.test(text)
@@ -344,7 +349,7 @@ export class Session {
       let spokeEarly = false
       const outcome = await runAgent({
         userText: text,
-        history: this.historyMessages(),
+        history: this.historyMessages(settings),
         settings,
         memory: this.deps.memory,
         models: this.deps.models,
@@ -464,7 +469,11 @@ export class Session {
         this.deps.speak(assistantItem.text)
       }
 
-      void this.deps.memory.recordExchange(text, assistantItem.text)
+      // A partial turn or a refusal is not a memory: recalling it later made
+      // the model repeat the failure instead of trying again.
+      if (!outcome.incomplete && assistantItem.text.trim() && !isObsoleteRefusal(assistantItem.text)) {
+        void this.deps.memory.recordExchange(text, assistantItem.text)
+      }
       this.persist()
     } catch (error) {
       const aborted = error instanceof Error && error.name === 'AbortError'
@@ -610,21 +619,31 @@ export class Session {
     this.persist()
   }
 
-  private historyMessages(): OllamaMessage[] {
+  /**
+   * Conversation history sized to the model's actual context rather than a
+   * fixed 7,000 characters. The old cap spent most of an 8K window on four
+   * exchanges, so "it has no memory" was really "history was thrown away".
+   */
+  private historyMessages(settings: Settings): OllamaMessage[] {
+    const promptChars = contextBudgetChars(
+      settings.contextWindow || 16_384,
+      settings.maxOutputTokens || 1_536
+    )
+    const budget = Math.min(28_000, Math.max(8_000, Math.round(promptChars * 0.45)))
     const messages: OllamaMessage[] = []
     let chars = 0
-    for (const item of this.items.slice(-18)) {
+    for (const item of this.items.slice(-48)) {
       if (item.kind === 'user') {
-        if (chars + item.text.length > 7_000) continue
-        messages.push({ role: 'user', content: item.text.slice(0, 1_500) })
+        if (chars + item.text.length > budget) continue
+        messages.push({ role: 'user', content: item.text.slice(0, 2_000) })
         chars += item.text.length
       }
       else if (item.kind === 'assistant' && item.text) {
         // A refusal is not precedent. Feeding "I can't see the site" back to the
         // model teaches it to repeat the claim, so those turns are left out.
         if (isObsoleteRefusal(item.text)) continue
-        if (chars + item.text.length > 7_000) continue
-        messages.push({ role: 'assistant', content: item.text.slice(0, 2_000) })
+        if (chars + item.text.length > budget) continue
+        messages.push({ role: 'assistant', content: item.text.slice(0, 3_000) })
         chars += item.text.length
       }
     }

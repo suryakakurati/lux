@@ -7,7 +7,7 @@ pauses for explicit approval.
 | Tool | Risk | Arguments | What it does |
 | --- | --- | --- | --- |
 | `open_app` | safe | `name` | `open -a`, with fuzzy fallback against `/Applications` |
-| `quit_app` | safe | `name` | AppleScript `quit` |
+| `quit_app` | safe | `name` | quits a running app; AppleScript first, process `SIGTERM` when Automation is blocked; reports "not running" instead of launching it |
 | `list_apps` | safe | — | installed `.app` names |
 | `focus_preset` | safe | `preset` | opens preset apps + URLs, sets volume (study/coding/focus/reset) |
 | `system_status` | safe | — | CPU load, memory, disk, battery, volume; opens chat |
@@ -23,7 +23,7 @@ pauses for explicit approval.
 | `play_music` | safe | `tracks?`, `uri?`, `query?`, `resume?` | Plays one or more tracks by name or URI; the first starts now and the rest queue in order |
 | `spotify_control` | safe | `action` | play / pause / next / previous |
 | `apple_music_control` | safe | `action` | Music.app play / pause / next |
-| `browse` | safe | `action`, `url?`, `query?`, `engine?` | open a URL or a web search in the default browser |
+| `browse` | safe | `action`, `url?`, `query?`, `engine?`, `app?` | open a URL or run a web search in the person's browser (`default`, `firefox`, `safari`, `chrome`, `brave`, `arc`, `edge`) |
 | `news_digest` | safe | `topic?`, `limit` | Google News RSS headlines; opens chat |
 | `find_files` | safe | `query`, `limit` | Spotlight `mdfind`, filters system paths |
 | `open_path` | safe | `path` | `open` a file or folder |
@@ -53,7 +53,7 @@ pauses for explicit approval.
 | `browser_fill` | Fills a text field, textarea or select by label; input/change handlers can submit, so it asks for approval | safe* |
 | `browser_press` | Presses Enter, Tab, Escape, arrows, PageUp/Down, Home or End; Enter asks for approval because it can submit a form | safe* |
 | `browser_submit` | Clicks a submit control; creates an external action, so it requires approval | **confirm** |
-| `web_search` | Ranked direct web + news results with snippets; no browser window | safe |
+| `web_search` | Ranked web results (Brave index, with Bing and Google News as fallbacks) and snippets; no browser window | safe |
 | `research` | 2-angle search, concurrent page extraction, numbered dossier with source URLs | safe |
 | `list_playbooks` | Lists the seed and saved procedures available for a class of task | safe |
 | `save_playbook` | Saves an approved new procedure to the data directory | **confirm** |

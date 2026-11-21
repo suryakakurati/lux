@@ -4,6 +4,25 @@ All notable changes to Lux are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project follows semantic
 versioning.
 
+## [Unreleased]
+
+### Fixed
+
+- Lookups no longer become local file searches: generic request verbs (`find`, `get`, `show`) are
+  not tool names, and an unmatched phrasing still offers research and search instead of four machine
+  probes. The answer-only plan no longer hides every tool behind `discover_tools`.
+- Search uses Brave's index first, with Bing RSS and Google News as fallbacks; the old feed returned
+  an encyclopedia article and a clothing shop for a lyrics query.
+- A query for "the current song" or "this page" is refused with the instruction to resolve the real
+  title first, and a track request gets that hint directly.
+- `quit_app` checks that the app is running before asking AppleScript to quit it, and terminates the
+  process it found when Automation is blocked instead of reporting a permission failure.
+- `browse` can target Firefox, Safari, Chrome, Brave, Arc or Edge instead of only the default browser.
+- Context defaults to 16K (stored 8K values migrate), and conversation history is sized from the
+  configured window instead of a fixed 7,000 characters.
+- Failed and refused turns are no longer stored as memory, and asking again replaces the old reply
+  rather than letting it compete on recall.
+
 ## [0.1.0] — 2026-11-21
 
 This release turns the V.0 prototype into an agent with a planning loop, procedural memory, a

@@ -1,6 +1,7 @@
 import { Store } from '../store'
 import { rankMemories } from '../../../shared/recall'
 import { embed } from './ollama'
+import { isObsoleteRefusal } from './refusals'
 
 interface MemoryEntry {
   text: string
@@ -87,17 +88,28 @@ export class Memory {
     await this.queue
   }
 
+  /**
+   * An exchange is worth remembering only when it contained an answer. A past
+   * refusal or an error is not a fact, and feeding it back taught the model to
+   * repeat the failure instead of trying again.
+   */
+  private usable(entry: MemoryEntry): boolean {
+    const reply = entry.text.split('\n')[1]?.replace(/^Lux:\s*/, '').trim() ?? ''
+    return reply.length >= 40 && !isObsoleteRefusal(reply)
+  }
+
   /** Similar past exchanges for the current request, most relevant first. */
   async recall(query: string, k = 4): Promise<string[]> {
-    if (this.data.entries.length === 0) return []
+    const entries = this.data.entries.filter((entry) => this.usable(entry))
+    if (entries.length === 0) return []
     const mode = this.config().mode
 
-    if (mode === 'semantic' && this.data.entries.some((entry) => entry.vec.length > 0)) {
+    if (mode === 'semantic' && entries.some((entry) => entry.vec.length > 0)) {
       try {
         const { url, model } = this.config()
         const [vec] = await embed(url, model, [query.slice(0, 2_000)])
         if (vec && vec.length > 0) {
-          return this.data.entries
+          return entries
             .filter((entry) => entry.vec.length > 0)
             .map((entry) => ({ entry, score: cosine(vec, entry.vec) }))
             .filter((item) => item.score > 0.55)
@@ -110,16 +122,34 @@ export class Memory {
       }
     }
 
-    return rankMemories(this.data.entries, query, k).map(({ entry }) => this.summary(entry))
+    return rankMemories(entries, query, k).map(({ entry }) => this.summary(entry))
   }
 
+  /**
+   * A recalled line is read by the model as a claim, so it must not stop in the
+   * middle of one. Cut on a sentence when there is one, otherwise on a word.
+   */
   private summary(entry: MemoryEntry): string {
     const [userLine, assistantLine = ''] = entry.text.split('\n')
-    return `${userLine?.slice(0, 200) ?? ''} → ${assistantLine.replace(/^Lux:\s*/, '').slice(0, 200)}`
+    const reply = assistantLine.replace(/^Lux:\s*/, '').trim()
+    return `${userLine?.slice(0, 180) ?? ''} → ${this.excerpt(reply)}`
+  }
+
+  private excerpt(reply: string, max = 280): string {
+    if (reply.length <= max) return reply
+    const window = reply.slice(0, max)
+    const sentence = /\.\s/.exec(window)
+    if (sentence && sentence.index >= 80) return window.slice(0, sentence.index + 1)
+    return `${window.replace(/\s+\S*$/, '')}…`
   }
 
   private pushEntry(entry: MemoryEntry): void {
-    this.data.entries.push(entry)
+    // Asking the same thing again replaces the old reply. Keeping both made the
+    // earlier — possibly wrong — answer compete with the fresh one on recall.
+    const key = entry.text.split('\n')[0].trim().toLowerCase()
+    const existing = this.data.entries.findIndex((item) => item.text.split('\n')[0].trim().toLowerCase() === key)
+    if (existing >= 0) this.data.entries[existing] = entry
+    else this.data.entries.push(entry)
     if (this.data.entries.length > MAX_ENTRIES) {
       this.data.entries = this.data.entries.slice(-MAX_ENTRIES)
     }

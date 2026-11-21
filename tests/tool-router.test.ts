@@ -60,6 +60,39 @@ test('retrieval finds research tools for a comparison without intent regexes', (
   assert.equal(picked.length <= 8, true)
 })
 
+const FULL: ToolSchema[] = [
+  ...TOOLS,
+  tool('open_app', 'Open or raise a macOS application.'),
+  tool('quit_app', 'Quit a running macOS application by name.'),
+  tool('browse', 'Open a URL or a web search in the browser, including a named browser.'),
+  tool('web_search', 'Search the public web for result titles, URLs and snippets.'),
+  tool('find_files', 'Find files by name on this Mac.'),
+  tool('discover_tools', 'Discover capabilities that were not in this turn’s shortlist.')
+]
+
+test('a lyrics or translation lookup is offered the web tools, not a file search', () => {
+  const picked = names(shortlistTools('find the english lyrics translation of the current playing song', FULL, 8))
+  assert.ok(picked.includes('research'))
+  assert.ok(picked.includes('web_search'))
+  assert.equal(picked.includes('find_files'), false)
+})
+
+test('closing an app reaches the quit tool in the person’s own words', () => {
+  const picked = names(shortlistTools('close spotify for me', FULL, 8))
+  assert.ok(picked.includes('quit_app'))
+})
+
+test('naming a browser reaches the tool that drives that browser', () => {
+  const picked = names(shortlistTools('open example.com in firefox', FULL, 8))
+  assert.ok(picked.includes('browse'))
+})
+
+test('an unmatched phrasing still leaves research on the table', () => {
+  const picked = names(shortlistTools('zxcvbnm qwertyuiop', FULL, 8))
+  assert.ok(picked.includes('research'))
+  assert.ok(picked.includes('web_search'))
+})
+
 test('shortlisting never exceeds the cap', () => {
   const picked = shortlistTools(
     'music spotify track album playlist play song artist listening taste genre',

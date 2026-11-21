@@ -903,7 +903,7 @@ function SettingsPanel({
                 className="input"
                 type="number"
                 min={2048}
-                max={32768}
+                max={65536}
                 step={1024}
                 value={local.contextWindow}
                 onChange={(event) => setLocal({ ...local, contextWindow: Number(event.target.value) })}

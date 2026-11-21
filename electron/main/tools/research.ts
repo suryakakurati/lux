@@ -18,6 +18,10 @@ export const researchTools: ToolDef[] = [
           description: 'How many results to return (default 8, max 12).',
           minimum: 1,
           maximum: 12
+        },
+        fresh: {
+          type: 'boolean',
+          description: 'Ignore the short cache and search again (use when retrying a poor result).'
         }
       },
       required: ['query']
@@ -26,8 +30,21 @@ export const researchTools: ToolDef[] = [
     async run(args) {
       const query = normalizeQuery(String(args.query ?? ''))
       if (query.length < 2) return { content: 'Give me a search query.', summary: 'empty search' }
+      // A reference only this Mac can resolve is not a query. Searching it
+      // returns generic pages about the words themselves, which is how a
+      // one-result lookup ended as "I couldn't find it".
+      if (
+        /\b(current(?:ly)? (?:playing|song)|now playing|this song|the song playing|this track|the current track|this page|the current page|this email)\b/i.test(
+          query
+        )
+      ) {
+        return {
+          content: `"${query}" refers to something only this Mac knows, so the web index can only return generic pages about those words. Resolve it first (now_playing for a track, browser_read or the clipboard for a page), then search the concrete title, artist or headline.`,
+          summary: 'resolve the reference first'
+        }
+      }
       const limit = Math.min(12, Math.max(1, Number(args.limit ?? 8)))
-      const result = await searchWeb(query, limit)
+      const result = await searchWeb(query, limit, args.fresh === true)
       if (result.hits.length === 0) {
         return {
           content: `No search results for "${query}". Try a broader query, or use browser_open with a known URL.`,
@@ -95,9 +112,20 @@ export const researchTools: ToolDef[] = [
   }
 ]
 
-/** A stale year in a "latest" query is a model habit, not a user constraint. */
+/**
+ * Turn a request-shaped phrase into a search query. "Find the english lyrics
+ * translation of the song" is a request, not a query; leading politeness and
+ * generic verbs only dilute the index. A stale year in a "latest" query is a
+ * model habit, not a user constraint.
+ */
 function normalizeQuery(value: string, force = false): string {
-  const clean = value.replace(/\s+/g, ' ').trim()
+  const clean = value
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/^(?:please\s+)?(?:can you\s+|could you\s+)?(?:find(?: me)?|search(?: for)?|look up|google|show me|tell me|get me)\s+/i, '')
+    .replace(/^(?:the|a|an)\s+/i, '')
+    .trim()
+  if (!clean) return value.replace(/\s+/g, ' ').trim()
   if (!force && !/\b(latest|recent|new|news|developments?|updates?|releases?)\b/i.test(clean)) return clean
   const year = new Date().getFullYear()
   return clean

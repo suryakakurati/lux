@@ -159,7 +159,7 @@ Settings is a panel inside the chat window (⌘, or the gear). It covers:
   knowledge base, chat routing threshold, lexical/semantic memory.
 - **Spotify** — optional free developer-app credentials for name lookup.
 
-Defaults on this machine: `qwen3.5:latest`, 8K context, 1,536 max output tokens, 30-minute
+Defaults on this machine: `qwen3.5:latest`, 16K context, 1,536 max output tokens, 30-minute
 keep-alive, lexical memory, brief at 08:30, quiet hours 22:00–08:00.
 
 State is stored as atomic JSON under `~/Library/Application Support/Lux/data/`:

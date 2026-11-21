@@ -36,3 +36,20 @@ const NEEDS_MUSIC = /\b(music|song|songs|artist|album|playlist|spotify|listening
 export function needsMusicTaste(text: string): boolean {
   return NEEDS_MUSIC.test(text)
 }
+
+/**
+ * A request about the track that is playing — its lyrics, translation, meaning,
+ * artist or release. The track has to be resolved first: searching for "current
+ * song lyrics" is why a one-result lookup came back as "I can't find it".
+ */
+export function needsTrackLookup(text: string): boolean {
+  const aboutTrack =
+    /\b(?:current(?:ly)? playing|now playing|this song|the song|current song|this track|the track|playing right now|what'?s playing|currently listening|this artist)\b/i.test(
+      text
+    )
+  const wantsDetail =
+    /\b(?:lyrics?|translat\w*|meaning|mean|who sings|singer|artist|album|released?|release date|genre)\b/i.test(
+      text
+    )
+  return aboutTrack && wantsDetail
+}
