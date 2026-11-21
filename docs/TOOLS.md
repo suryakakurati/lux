@@ -53,7 +53,7 @@ pauses for explicit approval.
 | `browser_fill` | Fills a text field, textarea or select by label; input/change handlers can submit, so it asks for approval | safe* |
 | `browser_press` | Presses Enter, Tab, Escape, arrows, PageUp/Down, Home or End; Enter asks for approval because it can submit a form | safe* |
 | `browser_submit` | Clicks a submit control; creates an external action, so it requires approval | **confirm** |
-| `web_search` | Ranked web results (Brave index, with Bing and Google News as fallbacks) and snippets; no browser window | safe |
+| `web_search` | Ranked web results (Brave index, then a hidden Chromium render of Brave/DuckDuckGo when HTTP is blocked, with Bing and Google News as fallbacks) and snippets; no visible browser window | safe |
 | `research` | 2-angle search, concurrent page extraction, numbered dossier with source URLs | safe |
 | `list_playbooks` | Lists the seed and saved procedures available for a class of task | safe |
 | `save_playbook` | Saves an approved new procedure to the data directory | **confirm** |

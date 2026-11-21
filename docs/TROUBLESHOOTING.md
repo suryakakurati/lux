@@ -59,7 +59,8 @@ Then choose it in Settings → Model and press **Restart** on the engine row.
 Local inference on a 16 GB machine has a real floor.
 
 - The first turn after launch loads a 6.6 GB model. Expect several seconds before the first token.
-- A large context costs prefill time. Try 8K, which is the default.
+- A large context costs prefill time. The default is 24,576 tokens (24K); if prefill dominates a
+  short turn, drop it to 16K or 8K in Settings.
 - A turn that keeps calling tools is usually stuck on a failing page or an unsatisfied plan step.
   Read `turns.jsonl`: the `tools` and `plan` fields show what happened, and `kind: "model"` shows
   prefill, generation, load time and cache reuse.

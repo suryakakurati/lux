@@ -159,8 +159,8 @@ Settings is a panel inside the chat window (⌘, or the gear). It covers:
   knowledge base, chat routing threshold, lexical/semantic memory.
 - **Spotify** — optional free developer-app credentials for name lookup.
 
-Defaults on this machine: `qwen3.5:latest`, 16K context, 1,536 max output tokens, 30-minute
-keep-alive, lexical memory, brief at 08:30, quiet hours 22:00–08:00.
+Defaults on this machine: `qwen3.5:latest`, 24,576-token context (24K), 4,096 max output tokens,
+30-minute keep-alive, lexical memory, brief at 08:30, quiet hours 22:00–08:00.
 
 State is stored as atomic JSON under `~/Library/Application Support/Lux/data/`:
 
@@ -288,6 +288,9 @@ See [`docs/SECURITY.md`](docs/SECURITY.md) for the threat model.
 - The morning brief only fires while Lux is running, within a three-hour catch-up window.
 - Long prompts and cold model loads are still slow on a 16 GB machine; the HUD shows elapsed time
   rather than a spinner.
+- Web search providers can rate-limit this machine. Lux then renders the same query in its own
+  Chromium (Brave, then DuckDuckGo) and, if that is blocked too, says the search was blocked instead
+  of claiming the thing does not exist.
 - The benchmark's `ollama-release` task is flaky at 2/3 runs. The full suite has not been rerun since
   the Phase 2 changes.
 

@@ -100,10 +100,13 @@ Lux uses the model selected in Settings. Tool calling requires a tool-capable mo
 
 ### Research is slow, empty, or repeats searches
 
-`research` uses two keyless providers: Bing RSS for direct pages and Bing News RSS for current
-articles, then falls back to Google News snippets only when the first pass has fewer than three
-relevant results. Results are ranked against the question, so generic "local news" homepages are
-dropped. A single turn allows two research calls and three `web_search` calls; after that the model
+`research` runs three keyless providers together: Brave's HTML index for direct pages, Bing RSS for
+direct pages and Bing News RSS for current articles. When the HTTP Brave pass comes back empty —
+usually a 429 on a flagged client — the same query is rendered in Lux's hidden Chromium (Brave,
+then DuckDuckGo) and read from the DOM. Google News snippets are added only when the first pass has
+fewer than three relevant results. Results are ranked against the question, so generic "local news"
+homepages are dropped, and a provider outage is backed off for ten minutes. An empty result set with
+every provider blocked is reported as a block, never as "no results". A single turn allows two research calls and three `web_search` calls; after that the model
 is told to use the evidence it has. If a result is marked `search snippet; page not opened`, treat
 it as a lead rather than a full-page claim.
 

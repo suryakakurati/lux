@@ -960,8 +960,8 @@ function SettingsPanel({
             />
           </label>
           <p className="settings-note">
-            8K context and a 30-minute keep-alive are the defaults on 16 GB. A larger context costs
-            memory; the specialist only loads when a task explicitly asks for it.
+            24K context and a 30-minute keep-alive are the defaults on 16 GB. A larger context
+            costs memory; the specialist only loads when a task explicitly asks for it.
           </p>
         </section>
 
