@@ -58,6 +58,7 @@ export const appTools: ToolDef[] = [
     name: 'list_apps',
     description: 'List the applications installed on this Mac. Useful before opening something.',
     risk: 'safe',
+    parallelSafe: true,
     params: { type: 'object', properties: {} },
     async run() {
       const apps = await installedApps()

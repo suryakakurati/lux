@@ -45,10 +45,12 @@ function pickTool(clause: string, tools: ToolSchema[]): ToolSchema | null {
       .filter((word) => word.length >= 4)
   )
   const overlap = (tool: ToolSchema): number =>
-    tool.function.description
-      .toLowerCase()
-      .split(/[^a-z0-9]+/)
-      .filter((word) => word.length >= 4 && queryWords.has(word)).length
+    new Set(
+      tool.function.description
+        .toLowerCase()
+        .split(/[^a-z0-9]+/)
+        .filter((word) => word.length >= 4 && queryWords.has(word))
+    ).size
   const scored = tied.map((entry) => ({ tool: entry.tool, overlap: overlap(entry.tool) })).sort((a, b) => b.overlap - a.overlap)
   if (scored[0].overlap > (scored[1]?.overlap ?? 0)) return scored[0].tool
 

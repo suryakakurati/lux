@@ -1,9 +1,9 @@
 {
-  "at": "2026-11-21T04:45:08.756Z",
-  "idleRssMb": 538,
+  "at": "2026-11-21T06:55:20.838Z",
+  "idleRssMb": 372,
   "processes": 7,
   "waitMs": 60000,
-  "commit": "fe5e5cc",
-  "dirty": false,
+  "commit": "5874f7b",
+  "dirty": true,
   "note": "Sum of RSS across the app and all of its child processes after the settle window. Ollama is a separate process and is not counted."
 }

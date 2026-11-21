@@ -412,6 +412,7 @@ async function runTask(
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), TURN_TIMEOUT_MS[task.category])
   let firstTokenAt: number | undefined
+  let firstSpeechAt: number | undefined
   let outcome: AgentOutcome | undefined
   let errorText: string | undefined
   const taskState = tasks.begin(task.prompt)
@@ -429,6 +430,9 @@ async function runTask(
       timeBudgetMs: AGENT_BUDGET_MS[task.category],
       maxRounds: task.maxRounds,
       signal: controller.signal,
+      onFirstSentence: () => {
+        firstSpeechAt ??= Date.now()
+      },
       emit: (event: AgentEvent) => {
         if (event.type === 'token' && firstTokenAt === undefined) firstTokenAt = Date.now()
       }
@@ -470,8 +474,9 @@ async function runTask(
     prompt: task.prompt,
     wallMs,
     ttftMs: firstTokenAt === undefined ? undefined : firstTokenAt - started,
-    // V.0 speaks only after the loop; this is when speech is handed the text.
-    ttfswMs: wallMs,
+    // The voice loop now speaks the first complete sentence while the model
+    // continues; when no sentence is eligible, speech waits for the full text.
+    ttfswMs: firstSpeechAt === undefined ? wallMs : firstSpeechAt - started,
     promptTokens,
     evalTokens,
     cachedPromptTokens,

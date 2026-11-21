@@ -341,6 +341,7 @@ export class Session {
         )
       }
 
+      let spokeEarly = false
       const outcome = await runAgent({
         userText: text,
         history: this.historyMessages(),
@@ -353,6 +354,12 @@ export class Session {
         openTask: carry,
         taskState: task,
         signal: this.controller.signal,
+        onFirstSentence: (spoken) => {
+          if (source === 'voice' && settings.speechEnabled) {
+            spokeEarly = true
+            this.deps.speak(spoken)
+          }
+        },
         emit: (event) => {
           if (event.type === 'token') {
             if (!assistantStarted) {
@@ -453,7 +460,7 @@ export class Session {
         this.scheduleHide()
       }
 
-      if (source === 'voice' && settings.speechEnabled && assistantItem.text) {
+      if (source === 'voice' && settings.speechEnabled && assistantItem.text && !spokeEarly) {
         this.deps.speak(assistantItem.text)
       }
 

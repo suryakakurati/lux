@@ -79,7 +79,7 @@ tighter caps. The ceiling exists to catch a loop, not to ration reading.
 | --- | --- |
 | `wallMs` | `runAgent` start → final answer, median across runs |
 | `ttftMs` | turn start → first non-thinking content token, median across runs |
-| `ttfswMs` | turn start → the full reply is handed to speech. V.0 speaks only after the loop, so this equals wall time; Phase 2 changes it to the first sentence. |
+| `ttfswMs` | turn start → the first complete sentence is handed to speech; a turn with no early sentence reports the full reply. In the V.0.1 baseline this equals wall time because every reply was spoken after the loop. |
 | `promptTokens` | median of the sum of Ollama `prompt_eval_count` across model rounds |
 | `evalTokens` | median of the sum of Ollama `eval_count` across model rounds |
 | `cachedPromptTokens` | median of the sum of `prompt_eval_cached_count` |
@@ -156,6 +156,38 @@ The V.0 report was a single run from an uncommitted harness, so comparisons are
 directional rather than controlled: the task mix, citation checks and round
 limits all changed.
 
+## Phase 2 focused result
+
+Measured 2026-11-21 from the Phase 2 working tree on top of `5874f7b`, focused
+set of 8 tasks, three runs, `qwen3.5:latest` digest `6488c96fa5fa`, greedy
+sampling. This is an iteration subset, not a baseline: the tree was dirty and
+the report is marked `verified: false`. The comparison uses the same eight tasks
+from the verified V.0.1 baseline, because the full-baseline medians include
+tasks that were deliberately left out of this pass.
+
+| Result | V.0.1 baseline subset | Phase 2 | Change |
+| --- | --- | --- | --- |
+| Tasks passing every run | 8 / 8 | 8 / 8 | — |
+| Multi-tool median | 29,550 ms | 9,919 ms | −66% |
+| Trivial median | 11,961 ms | 6,185 ms | −48% |
+| Median TTFSW | 19,239 ms | 8,640 ms | −55% |
+| Median rounds | 2 | 1 | −1 |
+| Idle RSS | 538 MB | 372 MB | −31% |
+
+The gain comes from the plan, not from skipping checks. When every mandatory
+step is a safe zero-argument read (`battery_status`, `get_volume`,
+`system_status`, `clipboard_read`, `list_apps`, `now_playing`), the plan runs
+those reads before the first model round and closes the toolbox for that round
+so the model answers from the results instead of calling them again. A partial
+match, such as battery plus a file search, keeps the remaining tool available.
+First-sentence speech lowers TTFSW on turns without a tool; the shortlist cap
+and the planner tie-break fix remove redundant rounds and the wrong
+read/write choice.
+
+The report is `v0.1.0-phase2-focused.json`; raw replies and tool URLs remain in
+the gitignored local raw output. The idle sample is the 60 s process-tree
+measurement in `idle-rss.json`.
+
 ## Caveats
 
 - Single-machine measurements on an M4 MacBook Air, 16 GB. Not a controlled lab.
@@ -171,6 +203,7 @@ limits all changed.
 
 - `v0.0-baseline.json` — historical V.0 run, unverified provenance, kept as-is
 - `v0.0.1-baseline.json` — verified V.0.1 baseline, clean commit, repeated runs
+- `v0.1.0-phase2-focused.json` — Phase 2 focused iteration report, unverified tree
 - `idle-rss.json` — the latest idle RSS sample with its commit and timestamp
 - `latest.json` — the most recent single run, ignored by git
 - `raw/*.raw.json` — full replies, cited URLs and tool summaries, kept local and

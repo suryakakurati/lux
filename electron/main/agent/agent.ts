@@ -5,6 +5,7 @@ import type { ModelManager } from './model-manager'
 import type { ModelMetrics, OllamaMessage, SamplingOptions } from './ollama'
 import { streamChat } from './ollama'
 import { extractUrls, normaliseUrl } from '../../../shared/citations'
+import { firstSpokenSentence } from '../../../shared/speech'
 import { contextBudgetChars, fitContext, truncateToolResult } from '../../../shared/context'
 import {
   acceptedTools,
@@ -65,6 +66,8 @@ export interface AgentInput {
   timeBudgetMs?: number
   /** Hard ceiling on model rounds; the last round is reserved for an answer. */
   maxRounds?: number
+  /** Hand a complete first sentence to speech before the full answer is ready. */
+  onFirstSentence?: (text: string) => void
   emit: (event: AgentEvent) => void
 }
 
@@ -116,7 +119,7 @@ interface PreparedCall {
 export async function runAgent(input: AgentInput): Promise<AgentOutcome> {
   const allTools = toolDefinitions()
   const objective = input.userText.trim()
-  const tools = shortlistTools(`${objective} ${input.turnHint ?? ''} ${input.openTask ?? ''}`, allTools)
+  const tools = shortlistTools(`${objective} ${input.turnHint ?? ''} ${input.openTask ?? ''}`, allTools, 8)
   const playbooks = listPlaybooks()
   let plan = planForTurn(objective, tools, playbooks)
   // A plan with no action is answered from context. Only discovery stays on the
@@ -219,9 +222,79 @@ export async function runAgent(input: AgentInput): Promise<AgentOutcome> {
   let lastSummary = ''
   let finalText = ''
   let hadTools = false
+  let spokeEarly = false
   let forcedChat = false
   let incomplete = false
   let rounds = 0
+  let prefetchedComplete = false
+
+  // Safe, zero-argument reads are the one place the plan can act without the
+  // model first choosing the call. Fetching them together removes a whole
+  // model round from "battery and clipboard" turns and makes a single-read
+  // question a one-round answer. The whitelist is deliberately tiny: no args,
+  // no side effects, no confirmations.
+  const PREFETCHABLE = new Set([
+    'battery_status',
+    'get_volume',
+    'system_status',
+    'clipboard_read',
+    'list_apps',
+    'now_playing'
+  ])
+  const prefetchedTools = new Set<string>()
+  const prefetchSteps =
+    plan.allowQuestion || answerOnly
+      ? []
+      : plan.steps
+          .filter((step) => {
+            if (step.kind === 'answer' || step.kind === 'clarify' || step.optional) return false
+            if (!step.tool || !PREFETCHABLE.has(step.tool) || prefetchedTools.has(step.tool)) return false
+            prefetchedTools.add(step.tool)
+            return true
+          })
+          .slice(0, 3)
+  if (prefetchSteps.length > 0) {
+    const prefetched = await mapLimit(prefetchSteps, MAX_PARALLEL_TOOLS, async (step) => {
+      const name = step.tool as string
+      const run: ToolRun = {
+        id: `tool-prefetch-${Date.now()}-${toolRuns.length}`,
+        name,
+        args: {},
+        status: 'running'
+      }
+      toolRuns.push(run)
+      input.emit({ type: 'tool-start', run })
+      const outcome = await executeTool(name, {}, input.toolContext)
+      const finished: ToolRun = {
+        ...run,
+        status: outcome.ok ? 'ok' : outcome.error_kind === 'denied' ? 'denied' : 'error',
+        summary: outcome.summary,
+        ms: outcome.durationMs
+      }
+      const index = toolRuns.findIndex((entry) => entry.id === run.id)
+      if (index >= 0) toolRuns[index] = finished
+      trace.tool(name, finished.status, outcome.durationMs, outcome.summary, {})
+      input.emit({ type: 'tool-end', run: finished })
+      evidence.tools.push({ name, ok: outcome.ok })
+      rememberUrls(outcome.data)
+      task?.tool(name, outcome.ok, outcome.summary, outcome.data, {})
+      return { step, outcome, name }
+    })
+    hadTools = true
+    lastToolName = prefetched.map((entry) => entry.name).join(', ')
+    lastSummary = prefetched.at(-1)?.outcome.summary ?? ''
+    const blocks = prefetched.map(({ name, outcome }) => {
+      const data = truncateToolResult(name, outcome.data)
+      return `### ${name} (${outcome.ok ? 'ok' : 'failed'})\n${data}${
+        outcome.next_hint ? `\nNext: ${outcome.next_hint}` : ''
+      }`
+    })
+    messages.push({
+      role: 'system',
+      content: `Already read for this request. The plan selected these safe, zero-argument reads; use them and do not call these tools again.\n\n${blocks.join('\n\n')}`
+    })
+    prefetchedComplete = openRequiredSteps(plan, evidence).length === 0
+  }
 
   logLine(
     'agent',
@@ -251,6 +324,14 @@ export async function runAgent(input: AgentInput): Promise<AgentOutcome> {
           label: lastSummary || lastToolName || 'thinking'
         })
       }
+      const closedByPrefetch = prefetchedComplete && round === 0 && !answerOnly
+      if (closedByPrefetch) {
+        messages.push({
+          role: 'system',
+          content:
+            'All planned reads are already complete from the prefetched results. Answer now; tools are closed for this round. Do not repeat those reads.'
+        })
+      }
       trace.round(round)
 
       const modelOptions = input.models?.chatOptions() ?? {
@@ -273,7 +354,7 @@ export async function runAgent(input: AgentInput): Promise<AgentOutcome> {
         url: input.settings.ollamaUrl,
         model: input.settings.model,
         messages: requestMessages,
-        tools: finalRound ? [] : offered,
+        tools: finalRound || closedByPrefetch ? [] : offered,
         keepAlive: modelOptions.keepAlive,
         numCtx: modelOptions.numCtx,
         numPredict: modelOptions.numPredict,
@@ -290,6 +371,13 @@ export async function runAgent(input: AgentInput): Promise<AgentOutcome> {
         if (chunk.content) {
           roundText += chunk.content
           input.emit({ type: 'token', delta: chunk.content })
+          if (!spokeEarly && input.onFirstSentence && !actionable && !hadTools) {
+            const sentence = firstSpokenSentence(roundText)
+            if (sentence) {
+              spokeEarly = true
+              input.onFirstSentence(sentence)
+            }
+          }
         }
         if (chunk.toolCalls) accumulator.add(chunk.toolCalls)
       }

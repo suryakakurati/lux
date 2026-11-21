@@ -165,6 +165,15 @@ export function shortlistTools(query: string, tools: ToolSchema[], limit = 12): 
     if (tool) chosen.set(name, tool)
   }
 
+  // A direct name match is stronger evidence than a synonym. Put those first
+  // so "what's playing" still gets now_playing even when the music lexicon is
+  // larger than the remaining slots.
+  for (const { tool, score } of rankTools(query, tools)) {
+    if (chosen.size >= limit) break
+    if (score < 6) break
+    chosen.set(tool.function.name, tool)
+  }
+
   for (const word of words) {
     for (const name of ALIASES[word] ?? []) {
       if (chosen.size >= limit) break

@@ -29,6 +29,15 @@ test('an ordinary question becomes one actionable step and an answer', () => {
   assert.equal(plan.steps.at(-1)?.kind, 'answer')
 })
 
+test('a read question chooses the reader even when another description repeats the topic', () => {
+  const tools = [
+    tool('set_volume', 'Set the Mac output volume. Also handles mute (0) and full volume (100).'),
+    tool('get_volume', 'Read the current output volume and mute state.')
+  ]
+  const plan = planForTurn("What's the output volume?", tools, [])
+  assert.equal(plan.steps[0].tool, 'get_volume')
+})
+
 test('a compound request keeps its independent reads', () => {
   const plan = planForTurn("What's my battery percentage and what's on my clipboard?", TOOLS, [])
   assert.deepEqual(
