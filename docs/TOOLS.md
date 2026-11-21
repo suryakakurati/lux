@@ -1,6 +1,6 @@
 # Tool catalog
 
-55 tools. Everything runs locally except the pages that are inherently remote (news, `web_read`,
+56 tools. Everything runs locally except the pages that are inherently remote (news, `web_read`,
 `web_search`, `research`, the agent browser and Spotify lookups). `risk: confirm` means the turn
 pauses for explicit approval.
 
@@ -23,8 +23,7 @@ pauses for explicit approval.
 | `play_music` | safe | `tracks?`, `uri?`, `query?`, `resume?` | Plays one or more tracks by name or URI; the first starts now and the rest queue in order |
 | `spotify_control` | safe | `action` | play / pause / next / previous |
 | `apple_music_control` | safe | `action` | Music.app play / pause / next |
-| `open_url` | safe | `url` | default browser, adds `https://` |
-| `search_web` | safe | `query`, `engine` | google, duckduckgo, youtube, github, wikipedia, maps |
+| `browse` | safe | `action`, `url?`, `query?`, `engine?` | open a URL or a web search in the default browser |
 | `news_digest` | safe | `topic?`, `limit` | Google News RSS headlines; opens chat |
 | `find_files` | safe | `query`, `limit` | Spotlight `mdfind`, filters system paths |
 | `open_path` | safe | `path` | `open` a file or folder |
@@ -35,8 +34,8 @@ pauses for explicit approval.
 | `commitments` | safe | `action`, `text?`, `due?`, `target?`, `minutes?` | list, add, complete, snooze or read the deterministic morning brief |
 | `clipboard_read` | safe | — | current clipboard text |
 | `clipboard_write` | safe | `text` | copy text |
-| `set_timer` | safe | `minutes`, `label` | countdown that notifies and speaks |
-| `list_timers` | safe | — | active timers |
+| `timer` | safe | `action`, `minutes?`, `label?` | start a countdown that notifies and speaks, or list active timers |
+| `job` | safe | `action`, `tool?`, `args?`, `label?`, `id?` | run one existing tool in the background, then list, read or stop it |
 | `take_screenshot` | safe | `mode` | `~/Pictures/Lux`, full or selection |
 | `run_shell` | **confirm** | `command`, `reason` | zsh with blocklist, 20 s timeout |
 

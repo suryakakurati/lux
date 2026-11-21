@@ -19,6 +19,7 @@
     "bench": "npm run build && electron out/main/bench.js",
     "bench:baseline": "npm run build && LUX_BENCH_BASELINE=1 LUX_BENCH_RUNS=3 electron out/main/bench.js",
     "bench:rss": "npm run build && node scripts/measure-idle.mjs",
+    "evals": "rolldown evals/run.ts -f cjs -p node -o .evals/run.cjs && node .evals/run.cjs",
     "assets": "python3 scripts/make-tray-icon.py",
     "package": "bash scripts/package.sh"
   },

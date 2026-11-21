@@ -188,13 +188,13 @@ async function main(): Promise<void> {
     const outcome = await executeTool(item.tool, item.args ?? {}, context)
     const ms = Date.now() - started
     const expected = item.expect ?? 'ok'
-    const denied = outcome.denied === true || /declined/i.test(outcome.content)
+    const denied = outcome.denied === true || /declined/i.test(outcome.data)
     const good = expected === 'denied' ? denied : outcome.ok
     const skipped =
       !good &&
       item.optional === true &&
       /not installed|no obsidian|no vault|not found|unreadable|no notes|no site|sign-in|no search results|no readable|network|timed out|no specialist|memory is/i.test(
-        outcome.content
+        outcome.data
       )
 
     const status: AuditResult['status'] = good ? 'pass' : skipped ? 'skip' : 'fail'
@@ -204,11 +204,11 @@ async function main(): Promise<void> {
       status,
       ms,
       summary: outcome.summary,
-      detail: status === 'pass' ? undefined : outcome.content.slice(0, 400)
+      detail: status === 'pass' ? undefined : outcome.data.slice(0, 400)
     })
     const mark = status === 'pass' ? 'PASS' : status === 'skip' ? 'SKIP' : 'FAIL'
     console.log(`${mark.padEnd(4)} ${item.group.padEnd(9)} ${item.tool.padEnd(20)} ${String(ms).padStart(5)}ms  ${outcome.summary}`)
-    if (status === 'fail') console.log(`     ${outcome.content.replace(/\s+/g, ' ').slice(0, 220)}`)
+    if (status === 'fail') console.log(`     ${outcome.data.replace(/\s+/g, ' ').slice(0, 220)}`)
   }
 
   // Clean up the note the write test created, so auditing is repeatable.
@@ -233,14 +233,14 @@ async function main(): Promise<void> {
     )
     await new Promise((resolve) => setTimeout(resolve, 2_500))
     const now = await executeTool('now_playing', {}, context)
-    const audible = now.ok && !/no track loaded|not running|idle/i.test(now.content)
+    const audible = now.ok && !/no track loaded|not running|idle/i.test(now.data)
     results.push({
       group: 'music',
       tool: 'play_music (audio)',
       status: play.ok && audible ? 'pass' : 'fail',
       ms: Date.now() - started,
       summary: now.summary,
-      detail: play.ok ? now.content.slice(0, 300) : play.content.slice(0, 300)
+      detail: play.ok ? now.data.slice(0, 300) : play.data.slice(0, 300)
     })
     console.log(`${audible ? 'PASS' : 'FAIL'} music     play_music (audio)   ${Date.now() - started}ms  ${now.summary}`)
     await executeTool('spotify_control', { action: 'pause' }, context)

@@ -63,7 +63,7 @@ export async function runFormTest(): Promise<boolean> {
         return false
       }
     })
-    const bypassBlocked = denied.ok && /declined/i.test(denied.content) && submitted === ''
+    const bypassBlocked = denied.ok && /declined/i.test(denied.data) && submitted === ''
     console.log(
       `[form-test] denied submit click ${bypassBlocked ? 'blocked' : 'BYPASSED'} — confirmations=${confirmations}`
     )

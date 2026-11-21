@@ -1,16 +1,17 @@
 /**
- * Tool shortlisting.
+ * Tool shortlisting by lexical retrieval.
  *
- * Every tool schema is tokens in the prompt, and the full registry costs real latency on
- * a local model: they slow the first token and they dilute the choice. A turn
- * usually needs a handful, so the registry is ranked against the request and
- * only the plausible ones are offered.
+ * Every tool schema is tokens in the prompt, and the full registry costs real
+ * latency on a local model: it slows the first token and dilutes the choice. A
+ * turn usually needs a handful, so the registry is ranked against the request
+ * and only the plausible ones are offered.
  *
- * This is a lossless optimisation: a call to a tool that exists but was not
- * offered still executes (see `executeTool`), so a wrong guess about relevance
- * never blocks the assistant.
+ * The query is expanded with a small capability lexicon rather than a list of
+ * intent regexes. A word such as "compare" retrieves the research tools because
+ * they are the capabilities that satisfy comparisons, not because a pattern
+ * decided what the sentence meant. A failed guess is never a permission
+ * boundary: a call to a real tool that was not offered still executes.
  */
-/** The shape of a tool schema, kept structural so this module stays pure. */
 export interface ToolSchema {
   type: 'function'
   function: { name: string; description: string; parameters: Record<string, unknown> }
@@ -24,53 +25,93 @@ const STOP = new Set([
   'some', 'any', 'all', 'out', 'into', 'about', 'there', 'here', 'them', 'they', 'its',
   'our', 'not', 'but', 'then', 'than', 'too', 'very', 'also', 'use', 'using', 'make',
   'mac', 'lux', 'thing', 'things', 'stuff', 'something', 'anything', 'much', 'many',
-  // "right now" must not select now_playing, and "time" must not prefix-match
-  // a timer tool; neither is a capability word on its own.
+  // "right now" must not select now_playing, and "time" is not a capability.
   'time', 'right'
 ])
 
 /** Always offered: the tools that answer "what is going on" cheaply. */
-const CORE = [
-  'open_app',
-  'system_status',
-  'clipboard_read',
-  'discover_tools'
-]
+const CORE = ['open_app', 'system_status', 'clipboard_read', 'discover_tools']
 
 /**
- * Capability expansions. The descriptions are short because these are matched
- * against the person's sentence, not shown to the model.
+ * Capability retrieval. These are synonyms for a need, not sentence patterns:
+ * each word simply votes for the tools that can satisfy it.
  */
-const EXPANSIONS: { pattern: RegExp; names: string[] }[] = [
-  {
-    pattern: /\b(research|investigat|compare|comparison|latest|news|sources?|developments?|survey|analy[sz]e)\b/i,
-    names: ['research', 'web_search', 'web_read', 'browser_open', 'browser_read', 'news_digest', 'discover_tools']
-  },
-  {
-    pattern: /\b(web|website|page|url|link|browse|browser|search|online|internet|site)\b/i,
-    names: ['web_search', 'web_read', 'search_web', 'browser_open', 'browser_read', 'browser_click', 'browser_scroll', 'browser_fill', 'browser_submit', 'browser_press', 'browser_inspect', 'browser_back', 'browser_forward', 'site_open', 'discover_tools']
-  },
-  {
-    pattern: /\b(assignments?|grades?|course|class|portal|inbox|email|calendar|deadline|due)\b/i,
-    names: ['site_open', 'browser_open', 'history_search', 'browser_read', 'web_read', 'discover_tools']
-  },
-  {
-    pattern: /\b(notes?|vault|obsidian|markdown|write|save|summarize)\b/i,
-    names: ['vault_search', 'vault_read', 'vault_write', 'search_notes', 'write_note', 'discover_tools']
-  },
-  {
-    pattern: /\b(files?|folder|document|pdf|find|locate|open)\b/i,
-    names: ['find_files', 'open_path', 'quick_look', 'search_notes', 'discover_tools']
-  },
-  {
-    pattern: /\b(timers?|alarms?|remind|countdown|minutes?)\b/i,
-    names: ['set_timer', 'list_timers', 'discover_tools']
-  },
-  {
-    pattern: /\b(music|spotify|song|track|album|playlist|listen|play)\b/i,
-    names: ['music_taste', 'play_music', 'spotify_search', 'spotify_control', 'now_playing', 'apple_music_control']
-  }
-]
+const ALIASES: Record<string, string[]> = {
+  research: ['research', 'web_search', 'web_read', 'news_digest'],
+  investigate: ['research', 'web_search', 'web_read'],
+  compare: ['research', 'web_search', 'web_read'],
+  comparison: ['research', 'web_search', 'web_read'],
+  versus: ['research', 'web_search'],
+  recommend: ['research', 'web_read'],
+  sources: ['research', 'web_read', 'web_search'],
+  source: ['research', 'web_read', 'web_search'],
+  citations: ['research', 'web_read'],
+  references: ['research', 'web_read'],
+  latest: ['research', 'web_search', 'news_digest'],
+  release: ['research', 'web_search', 'news_digest'],
+  changelog: ['research', 'web_search'],
+  news: ['news_digest', 'web_search', 'research'],
+  article: ['web_read', 'browser_open', 'browser_read'],
+  web: ['web_search', 'web_read', 'browse', 'browser_open', 'browser_read', 'site_open'],
+  website: ['browse', 'browser_open', 'browser_read', 'web_read', 'site_open'],
+  page: ['web_read', 'browser_open', 'browser_read', 'browse'],
+  url: ['web_read', 'browse', 'browser_open'],
+  link: ['web_read', 'browse', 'browser_open'],
+  browse: ['browse', 'browser_open', 'browser_read'],
+  browser: ['browser_open', 'browser_read', 'browse', 'site_open'],
+  search: ['web_search', 'browse', 'search_notes', 'history_search'],
+  online: ['web_search', 'browse', 'web_read'],
+  internet: ['web_search', 'browse'],
+  site: ['site_open', 'browser_open', 'browse'],
+  assignment: ['site_open', 'browser_open', 'browser_read', 'history_search'],
+  assignments: ['site_open', 'browser_open', 'browser_read', 'history_search'],
+  course: ['site_open', 'browser_open', 'browser_read'],
+  portal: ['site_open', 'browser_open', 'browser_read'],
+  email: ['site_open', 'browser_open', 'browser_read'],
+  calendar: ['site_open', 'browser_open', 'browser_read'],
+  deadline: ['commitments', 'site_open'],
+  notes: ['search_notes', 'vault_search', 'vault_read', 'write_note'],
+  note: ['search_notes', 'vault_search', 'vault_read', 'write_note'],
+  vault: ['vault_search', 'vault_read', 'vault_write'],
+  obsidian: ['vault_search', 'vault_read', 'vault_write'],
+  markdown: ['vault_search', 'vault_read', 'write_note'],
+  summarize: ['web_read', 'research', 'vault_read'],
+  summarise: ['web_read', 'research', 'vault_read'],
+  files: ['find_files', 'open_path', 'quick_look'],
+  file: ['find_files', 'open_path', 'quick_look'],
+  folder: ['find_files', 'open_path'],
+  document: ['find_files', 'open_path'],
+  pdf: ['find_files', 'open_path'],
+  find: ['find_files', 'search_notes', 'vault_search'],
+  locate: ['find_files', 'open_path'],
+  timers: ['timer'],
+  timer: ['timer'],
+  alarm: ['timer'],
+  remind: ['timer', 'commitments'],
+  countdown: ['timer'],
+  minutes: ['timer'],
+  music: ['music_taste', 'play_music', 'spotify_search', 'spotify_control', 'now_playing', 'apple_music_control'],
+  spotify: ['music_taste', 'play_music', 'spotify_search', 'spotify_control', 'now_playing'],
+  song: ['play_music', 'spotify_search', 'now_playing'],
+  track: ['play_music', 'spotify_search', 'now_playing'],
+  album: ['play_music', 'spotify_search'],
+  playlist: ['play_music', 'spotify_search', 'music_taste'],
+  listen: ['music_taste', 'play_music', 'now_playing'],
+  play: ['play_music', 'spotify_search', 'spotify_control'],
+  battery: ['system_status', 'battery_status'],
+  volume: ['system_status', 'get_volume'],
+  cpu: ['system_status'],
+  memory: ['system_status'],
+  disk: ['system_status'],
+  clipboard: ['clipboard_read', 'clipboard_write'],
+  shell: ['run_shell'],
+  command: ['run_shell'],
+  screenshot: ['take_screenshot'],
+  jobs: ['job'],
+  background: ['job'],
+  playbooks: ['list_playbooks'],
+  playbook: ['list_playbooks', 'save_playbook']
+}
 
 function tokens(text: string): string[] {
   return text
@@ -92,8 +133,6 @@ function scoreTool(tool: ToolSchema, query: string[]): number {
   for (const word of query) {
     for (const part of nameTokens) {
       if (part === word) score += 6
-      // Prefixes only count when both words are long enough to mean something:
-      // "timer" must not match "time", and "play" must not match "playing".
       else if (part.startsWith(word) && word.length >= 5) score += 3
       else if (word.startsWith(part) && part.length >= 5) score += 3
     }
@@ -110,37 +149,35 @@ export function rankTools(query: string, tools: ToolSchema[]): Ranked[] {
 }
 
 /**
- * The tool set for one turn: core tools plus the best matches, capped.
- *
- * A vague request still gets the core tools plus discover_tools, so nothing is
- * silently unavailable; a failed guess never blocks execution either.
+ * The tool set for one turn: core tools, capability matches, then lexical
+ * matches, capped. An unrecognised request still has the core tools plus
+ * discover_tools, so nothing is silently unavailable.
  */
 export function shortlistTools(query: string, tools: ToolSchema[], limit = 12): ToolSchema[] {
   if (tools.length <= limit) return tools
 
-  const ranked = rankTools(query, tools)
-
+  const words = [...new Set(tokens(query))]
   const chosen = new Map<string, ToolSchema>()
+
   for (const name of CORE) {
     if (chosen.size >= limit) break
     const tool = tools.find((candidate) => candidate.function.name === name)
     if (tool) chosen.set(name, tool)
   }
 
-  for (const expansion of EXPANSIONS) {
-    if (!expansion.pattern.test(query)) continue
-    for (const name of expansion.names) {
+  for (const word of words) {
+    for (const name of ALIASES[word] ?? []) {
       if (chosen.size >= limit) break
       const tool = tools.find((candidate) => candidate.function.name === name)
       if (tool) chosen.set(name, tool)
     }
   }
 
-  for (const { tool, score } of ranked) {
+  for (const { tool, score } of rankTools(query, tools)) {
     if (chosen.size >= limit) break
     if (score <= 0) break
     chosen.set(tool.function.name, tool)
   }
-  // Order by the registry so the prompt stays stable between similar turns.
+
   return tools.filter((tool) => chosen.has(tool.function.name))
 }

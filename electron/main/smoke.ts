@@ -49,7 +49,7 @@ async function main(): Promise<void> {
       remember: () => undefined
     })
     console.log(`[smoke] tool ${process.env.LUX_SMOKE_TOOL} ${outcome.ok ? 'ok' : 'FAILED'} ${outcome.durationMs}ms — ${outcome.summary}`)
-    console.log(outcome.content)
+    console.log(outcome.data)
     // Background work — the play queue polling Spotify — needs the process alive
     // long enough to be observed. Without this a queue looks started but never runs.
     const hold = Number(process.env.LUX_SMOKE_HOLD_MS ?? 0)

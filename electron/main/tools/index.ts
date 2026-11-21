@@ -1,10 +1,12 @@
 import { validateArgs } from '../../../shared/validate'
 import { rankTools } from '../../../shared/tool-router'
+import { failureEnvelope, successEnvelope } from '../../../shared/tool-envelope'
 import { agniTools } from './agni'
 import { appTools } from './apps'
 import { browseTools } from './browse'
 import { commitmentTools } from './commitments'
 import { fileTools } from './files'
+import { jobTools } from './jobs'
 import { mediaTools } from './media'
 import { musicTools } from './music'
 import { miscTools } from './misc'
@@ -36,7 +38,8 @@ export const TOOLS: ToolDef[] = [
   ...noteTools,
   ...playbookTools,
   ...vaultTools,
-  ...miscTools
+  ...miscTools,
+  ...jobTools
 ]
 
 /** Dynamic capability discovery: the model can ask for schemas it was not offered. */
@@ -108,9 +111,12 @@ export async function executeTool(
   const tool = findTool(name)
   if (!tool) {
     return {
-      ok: false,
+      ...failureEnvelope(
+        'unknown_tool',
+        `There is no tool called "${name}". Available tools: ${TOOLS.map((t) => t.name).join(', ')}.`,
+        'Call discover_tools with the capability you need, then call the matching tool.'
+      ),
       summary: `unknown tool ${name}`,
-      content: `There is no tool called "${name}". Available tools: ${TOOLS.map((t) => t.name).join(', ')}.`,
       durationMs: Date.now() - started
     }
   }
@@ -118,9 +124,12 @@ export async function executeTool(
   const validation = validateArgs(tool.params, rawArgs)
   if (!validation.ok) {
     return {
-      ok: false,
+      ...failureEnvelope(
+        'invalid_args',
+        `Invalid arguments for ${name}: ${validation.error}`,
+        'Correct the arguments to match the schema, then call it once more.'
+      ),
       summary: `invalid args: ${name}`,
-      content: `Invalid arguments for ${name}: ${validation.error}`,
       durationMs: Date.now() - started
     }
   }
@@ -133,10 +142,13 @@ export async function executeTool(
     })
     if (!approved) {
       return {
-        ok: false,
+        ...failureEnvelope(
+          'denied',
+          'The person declined this action. Do not retry it; ask what they would prefer instead.',
+          'Do not retry. Ask what they would prefer instead.'
+        ),
         denied: true,
         summary: 'declined',
-        content: 'The person declined this action. Do not retry it; ask what they would prefer instead.',
         durationMs: Date.now() - started
       }
     }
@@ -159,9 +171,12 @@ export async function executeTool(
 
     if (raced.kind === 'timeout') {
       return {
-        ok: false,
+        ...failureEnvelope(
+          'timeout',
+          `${name} did not finish within ${Math.round(limited / 1000)}s, so it was abandoned.`,
+          'Do not repeat it blindly. Try a smaller request or a different tool, and say which step stalled.'
+        ),
         summary: `${name} timed out`,
-        content: `${name} did not finish within ${Math.round(limited / 1000)}s, so it was abandoned. Do not repeat it blindly: tell the person which step stalled, or try a different tool.`,
         durationMs: Date.now() - started
       }
     }
@@ -169,18 +184,20 @@ export async function executeTool(
 
     const result = raced.value
     return {
-      ok: true,
+      ...successEnvelope(result.content),
       summary: result.summary,
-      content: result.content,
       openChat: result.openChat,
       durationMs: Date.now() - started
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     return {
-      ok: false,
+      ...failureEnvelope(
+        'failed',
+        `${name} threw an error: ${message}`,
+        'Report the failure plainly. Do not claim the action succeeded.'
+      ),
       summary: `${name} failed`,
-      content: `${name} threw an error: ${message}`,
       durationMs: Date.now() - started
     }
   }

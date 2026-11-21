@@ -27,6 +27,7 @@ export const miscTools: ToolDef[] = [
     name: 'clipboard_read',
     description: 'Read the current clipboard text.',
     risk: 'safe',
+    parallelSafe: true,
     params: { type: 'object', properties: {} },
     async run() {
       const text = await clipboard.readText()
@@ -56,19 +57,29 @@ export const miscTools: ToolDef[] = [
     }
   },
   {
-    name: 'set_timer',
+    name: 'timer',
     description:
-      'Start a countdown timer. Lux notifies you and speaks when it finishes.',
+      'Start a countdown timer or list the timers still running. Lux notifies and speaks when a timer finishes.',
     risk: 'safe',
     params: {
       type: 'object',
       properties: {
-        minutes: { type: 'number', description: 'Duration in minutes (decimals allowed).', minimum: 0.05, maximum: 600 },
+        action: { type: 'string', description: 'start or list.', enum: ['start', 'list'] },
+        minutes: {
+          type: 'number',
+          description: 'Duration in minutes for action=start (decimals allowed).',
+          minimum: 0.05,
+          maximum: 600
+        },
         label: { type: 'string', description: 'What the timer is for, e.g. "tea".' }
       },
-      required: ['minutes']
+      required: ['action']
     },
     async run(args, context) {
+      if (args.action === 'list') {
+        if (timers.size === 0) return { content: 'No active timers.', summary: 'no timers' }
+        return { content: `${timers.size} timer(s) active.`, summary: `${timers.size} timers` }
+      }
       const minutes = Number(args.minutes ?? 1)
       const label = String(args.label ?? 'timer').trim() || 'timer'
       const id = `timer-${Date.now()}`
@@ -84,16 +95,6 @@ export const miscTools: ToolDef[] = [
         summary: `timer ${formatDuration(minutes)}`,
         openChat: false
       }
-    }
-  },
-  {
-    name: 'list_timers',
-    description: 'List the countdown timers that are still running, with what each one is for.',
-    risk: 'safe',
-    params: { type: 'object', properties: {} },
-    async run() {
-      if (timers.size === 0) return { content: 'No active timers.', summary: 'no timers' }
-      return { content: `${timers.size} timer(s) active.`, summary: `${timers.size} timers` }
     }
   },
   {

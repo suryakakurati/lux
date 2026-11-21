@@ -443,16 +443,18 @@ export async function runAgent(input: AgentInput): Promise<AgentOutcome> {
         input.emit({ type: 'tool-end', run: finished })
 
         if (outcome.openChat) forcedChat = true
-        if (reportsUnavailable(item.call.name, outcome.content)) toolUnavailable = outcome.ok
+        if (reportsUnavailable(item.call.name, outcome.data)) toolUnavailable = outcome.ok
         evidence.tools.push({ name: item.call.name, ok: outcome.ok })
-        rememberUrls(outcome.content)
+        rememberUrls(outcome.data)
         if (typeof item.call.args.url === 'string') rememberUrls(item.call.args.url)
+        const modelData = truncateToolResult(item.call.name, outcome.data)
+        if (modelData.length !== outcome.data.length) outcome.truncated = true
         messages.push({
           role: 'tool',
           tool_name: item.call.name,
-          content: truncateToolResult(item.call.name, outcome.content)
+          content: outcome.next_hint ? `${modelData}\n\nNext: ${outcome.next_hint}` : modelData
         })
-        task?.tool(item.call.name, outcome.ok, outcome.summary, outcome.content, item.call.args)
+        task?.tool(item.call.name, outcome.ok, outcome.summary, outcome.data, item.call.args)
       }
 
       // Verify against what actually ran, then repair at most one blocked step.
@@ -596,15 +598,18 @@ async function executeOne(
   if (item.decision === 'block' || searchingTooMuch || webSearchesExhausted || researchExhausted) {
     outcome = {
       ok: false,
-      summary: searchingTooMuch || webSearchesExhausted || researchExhausted ? 'stop searching' : 'repeated call blocked',
-      durationMs: 0,
-      content: researchExhausted
+      data: researchExhausted
         ? 'You have already run research twice this turn. Another broad pass will not add evidence. Use the sources you have, open one specific URL, or state the gap and answer.'
         : webSearchesExhausted
         ? 'You have already run web_search three times this turn. Another paraphrase will not add evidence. Use the results you have: call research, open one of the direct URLs above, or answer with what is verified and name the gap. Do not search again.'
         : searchingTooMuch
           ? 'You have already searched history this turn. Searching again with different words will not add anything. Act on the results you have: call site_open with the site name, or browser_open with one of the URLs above, then read the page.'
-          : repeatMessage(item.call.name, item.previous)
+          : repeatMessage(item.call.name, item.previous),
+      truncated: false,
+      error_kind: 'failed',
+      next_hint: 'Use the evidence already gathered; do not repeat the same call.',
+      summary: searchingTooMuch || webSearchesExhausted || researchExhausted ? 'stop searching' : 'repeated call blocked',
+      durationMs: 0
     }
   } else {
     outcome = await executeTool(item.call.name, item.call.args, input.toolContext)
@@ -614,7 +619,7 @@ async function executeOne(
       !outcome.ok &&
       !outcome.denied &&
       item.previous.length === 0 &&
-      repeatDecision([{ ok: false, content: outcome.content }]) === 'retry'
+      repeatDecision([{ ok: false, content: outcome.data }]) === 'retry'
     ) {
       logLine('agent', `transient failure, retrying once: ${item.call.name}`)
       trace.nudge(`retry ${item.call.name}`)
@@ -622,7 +627,7 @@ async function executeOne(
     }
     attempts.set(item.signature, [
       ...item.previous,
-      { ok: outcome.ok, content: outcome.content.slice(0, 600) }
+      { ok: outcome.ok, content: outcome.data.slice(0, 600) }
     ])
     attempts.set(`#${item.call.name}`, [
       ...(attempts.get(`#${item.call.name}`) ?? []),

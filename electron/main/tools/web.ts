@@ -12,52 +12,45 @@ const ENGINES: Record<string, (query: string) => string> = {
 
 export const webTools: ToolDef[] = [
   {
-    name: 'open_url',
-    description: 'Open a URL in the default browser.',
+    name: 'browse',
+    description:
+      'Open a URL in the default browser, or open a web search for a query. Use browse action=search when the person wants the browser, and web_search when you need result text in the conversation.',
     risk: 'safe',
     params: {
       type: 'object',
       properties: {
-        url: { type: 'string', description: 'Full URL; https:// is added when missing.' }
+        action: { type: 'string', description: 'open or search.', enum: ['open', 'search'] },
+        url: { type: 'string', description: 'Full URL for action=open; https:// is added when missing.' },
+        query: { type: 'string', description: 'Search terms for action=search.' },
+        engine: {
+          type: 'string',
+          description: 'Search engine for action=search (default google).',
+          enum: ['google', 'duckduckgo', 'youtube', 'github', 'wikipedia', 'maps']
+        }
       },
-      required: ['url']
+      required: ['action']
     },
     async run(args) {
+      if (args.action === 'search') {
+        const query = String(args.query ?? '').trim()
+        if (!query) return { content: 'Give me a search query.', summary: 'empty search' }
+        const engine = String(args.engine ?? 'google').toLowerCase()
+        const build = ENGINES[engine] ?? ENGINES.google
+        const result = await exec('/usr/bin/open', [build(query)], { timeout: 6_000 })
+        if (result.code !== 0) {
+          return { content: `Could not open the browser: ${truncate(result.stderr, 160)}`, summary: 'search failed' }
+        }
+        return { content: `Searched ${engine} for "${query}".`, summary: `${engine}: ${query}` }
+      }
+
       const raw = String(args.url ?? '').trim()
+      if (!raw) return { content: 'Give me a URL to open.', summary: 'missing url' }
       const url = /^[a-z]+:\/\//i.test(raw) ? raw : `https://${raw}`
       const result = await exec('/usr/bin/open', [url], { timeout: 6_000 })
       if (result.code !== 0) {
         return { content: `Could not open ${url}: ${truncate(result.stderr, 160)}`, summary: 'open failed' }
       }
       return { content: `Opened ${url}.`, summary: `open ${new URL(url).hostname}` }
-    }
-  },
-  {
-    name: 'search_web',
-    description:
-      'Open a web search in the browser. Engines: google, duckduckgo, youtube, github, wikipedia, maps.',
-    risk: 'safe',
-    params: {
-      type: 'object',
-      properties: {
-        query: { type: 'string', description: 'Search terms.' },
-        engine: {
-          type: 'string',
-          description: 'Search engine to use (default google).',
-          enum: ['google', 'duckduckgo', 'youtube', 'github', 'wikipedia', 'maps']
-        }
-      },
-      required: ['query']
-    },
-    async run(args) {
-      const query = String(args.query ?? '').trim()
-      const engine = String(args.engine ?? 'google').toLowerCase()
-      const build = ENGINES[engine] ?? ENGINES.google
-      const result = await exec('/usr/bin/open', [build(query)], { timeout: 6_000 })
-      if (result.code !== 0) {
-        return { content: `Could not open the browser: ${truncate(result.stderr, 160)}`, summary: 'search failed' }
-      }
-      return { content: `Searched ${engine} for "${query}".`, summary: `${engine}: ${query}` }
     }
   },
   {

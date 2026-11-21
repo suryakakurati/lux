@@ -16,7 +16,9 @@ const TOOLS: ToolSchema[] = [
   tool('vault_search', 'Search the Obsidian vault notes for a phrase.'),
   tool('run_shell', 'Run a shell command on this Mac.'),
   tool('system_status', 'Report CPU, memory, disk and battery for this machine.'),
-  tool('clipboard_read', 'Read the current clipboard text.')
+  tool('clipboard_read', 'Read the current clipboard text.'),
+  tool('research', 'Research a question across multiple sources.'),
+  tool('web_read', 'Read a public web page and return its text.')
 ]
 
 const names = (tools: ToolSchema[]): string[] => tools.map((entry) => entry.function.name)
@@ -48,6 +50,14 @@ test('a vague request keeps the whole registry', () => {
 test('no overlap with any tool means no gating', () => {
   const picked = shortlistTools('qwertyuiop zxcvbnm', TOOLS)
   assert.equal(picked.length, TOOLS.length)
+})
+
+test('retrieval finds research tools for a comparison without intent regexes', () => {
+  const big = [...TOOLS, ...Array.from({ length: 20 }, (_, index) => tool(`extra_${index}`, 'An unrelated local capability.'))]
+  const picked = names(shortlistTools('Compare two local runners and cite two sources', big, 8))
+  assert.ok(picked.includes('research'))
+  assert.ok(picked.includes('web_read'))
+  assert.equal(picked.length <= 8, true)
 })
 
 test('shortlisting never exceeds the cap', () => {

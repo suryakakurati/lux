@@ -38,8 +38,9 @@ import { CommitmentLedger } from './commitments'
 import { getSettings } from './config'
 import { initLog } from './log'
 import { batteryInfo, frontmostApp, outputVolume, runningApps } from './mac/stats'
-import { toolDefinitions } from './tools'
+import { executeTool, toolDefinitions } from './tools'
 import type { ToolContext } from './tools/types'
+import { backgroundJobs } from './jobs'
 import { BENCH_TASKS } from './bench-tasks'
 
 const HARNESS_VERSION = 2
@@ -255,6 +256,7 @@ async function main(): Promise<void> {
     speak: () => undefined,
     remember: () => undefined
   }
+  toolContext.runTool = (name, args) => executeTool(name, args, toolContext)
 
   const selected = selectTasks()
   const modelInfo = await readModelInfo(settings.ollamaUrl, settings.model)
@@ -406,6 +408,7 @@ async function runTask(
   }
 ): Promise<BenchTurnResult> {
   const started = Date.now()
+  backgroundJobs.reset()
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), TURN_TIMEOUT_MS[task.category])
   let firstTokenAt: number | undefined

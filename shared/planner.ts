@@ -22,6 +22,8 @@ const LOOSE_REFERENCE = /\b(?:that|this|the) (?:thing|stuff|one|business)\b/i
 
 /** A score a tool name match needs before a step is mandatory. */
 const CONFIDENT_TOOL_SCORE = 6
+/** A description-only coincidence is not enough to add a step. */
+const MIN_TOOL_SCORE = 2
 
 /**
  * Choose one tool for a clause, and refuse a tie.
@@ -31,7 +33,7 @@ const CONFIDENT_TOOL_SCORE = 6
  * than no step at all, so ties fall through to the answer step.
  */
 function pickTool(clause: string, tools: ToolSchema[]): ToolSchema | null {
-  const ranked = rankTools(clause, tools).filter((entry) => entry.score > 0)
+  const ranked = rankTools(clause, tools).filter((entry) => entry.score >= MIN_TOOL_SCORE)
   if (ranked.length === 0) return null
   const topScore = ranked[0].score
   const tied = ranked.filter((entry) => entry.score === topScore)
@@ -132,6 +134,14 @@ export function planForTurn(objective: string, tools: ToolSchema[], playbooks: P
   if (matched) return planFromPlaybook(matched.playbook, objective)
 
   const underdetermined = isUnderdetermined(objective)
+  if (underdetermined) {
+    return makePlan({
+      objective,
+      steps: [{ title: 'Ask one targeted question that resolves the request', kind: 'clarify' }],
+      source: 'generic',
+      allowQuestion: true
+    })
+  }
   const picked: { name: string; score: number; title: string }[] = []
   const seen = new Set<string>()
 

@@ -23,6 +23,7 @@ import type { OllamaMessage } from './agent/ollama'
 import type { Transcriber } from './stt'
 import { Store } from './store'
 import type { ToolContext } from './tools/types'
+import { executeTool } from './tools'
 import { batteryInfo, frontmostApp, outputVolume, runningApps, systemStats } from './mac/stats'
 
 interface StoredConversation {
@@ -303,6 +304,7 @@ export class Session {
         void this.deps.memory.addFact(fact)
       }
     }
+    toolContext.runTool = (name, args) => executeTool(name, args, toolContext)
 
     // Steering is per turn: a small model needs the intent restated where it
     // cannot be crowded out by the rest of the prompt.

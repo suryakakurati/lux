@@ -58,7 +58,7 @@ test('an underdetermined request allows one question instead of a forced tool', 
 
   const loose = planForTurn('Handle my music.', TOOLS, [])
   assert.equal(loose.allowQuestion, true)
-  assert.equal(loose.steps.every((step) => step.optional === true || step.kind === 'answer'), true)
+  assert.deepEqual(loose.steps.map((step) => step.kind), ['clarify'])
 })
 
 test('a request for sources carries a citation requirement', () => {

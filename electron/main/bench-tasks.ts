@@ -31,7 +31,8 @@ const NO_SIDE_EFFECTS = [
   'browser_submit',
   'browser_press',
   'focus_preset',
-  'save_playbook'
+  'save_playbook',
+  'job'
 ]
 
 export const BENCH_TASKS: BenchTask[] = [

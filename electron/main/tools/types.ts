@@ -1,8 +1,13 @@
 import type { ToolParams } from '../../../shared/validate'
+import type { ToolEnvelope, ToolErrorKind } from '../../../shared/tool-envelope'
 import type { OllamaTool } from '../agent/ollama'
+
+export type { ToolErrorKind }
 
 export interface ToolContext {
   commitments: import('../commitments').CommitmentLedger
+  /** Run another tool from a background job. Omitted by isolated harnesses. */
+  runTool?: (name: string, args: Record<string, unknown>) => Promise<ToolCallOutcome>
   confirm(request: { tool: string; args: Record<string, unknown>; reason: string }): Promise<boolean>
   notify(title: string, body: string): void
   speak(text: string): void
@@ -36,10 +41,8 @@ export interface ToolDef {
 
 export type { ToolParams }
 
-export interface ToolCallOutcome {
-  ok: boolean
+export interface ToolCallOutcome extends ToolEnvelope {
   summary: string
-  content: string
   durationMs: number
   openChat?: boolean
   denied?: boolean
