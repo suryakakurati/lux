@@ -110,6 +110,19 @@ function isReading(name: string): boolean {
   return family(name) === 'reading'
 }
 
+/**
+ * Information that is not on this Mac, however the request is phrased. Without
+ * this, "find the english lyrics translation of the current playing song"
+ * planned only now_playing, and the turn ended in "I could not find it" after
+ * reading a track title and never opening a search.
+ */
+const EXTERNAL_INFO =
+  /\b(lyrics?|translat\w*|definition|meaning|biography|discography|songwriters?|composers?|written by|directed by|release date|who (?:wrote|sang|sings|directed|composed|invented|won))\b/i
+
+/** Machine reads only make sense when the request is about this Mac's state. */
+const MACHINE_READ = /^(?:battery_status|get_volume|system_status)$/
+const MACHINE_CONTEXT = /\b(my|our|this (?:mac|laptop|machine)|current(?:ly)?|right now|level|percentage|percent|left|charging|plugged|muted?)\b/i
+
 function wantsSources(objective: string): boolean {
   return /\b(?:cite|cited|citations?|sources?|references?)\b/i.test(objective)
 }
@@ -159,7 +172,11 @@ export function planForTurn(objective: string, tools: ToolSchema[], playbooks: P
     if (picked.length >= 3) break
   }
 
-  if (picked.length === 0) {
+  // A request for outside information needs a lookup even when the request also
+  // matched a local resolver such as now_playing.
+  const needsResearch = EXTERNAL_INFO.test(objective) && !picked.some((entry) => isReading(entry.name))
+
+  if (picked.length === 0 && !needsResearch) {
     return makePlan({
       objective,
       steps: [
@@ -173,7 +190,10 @@ export function planForTurn(objective: string, tools: ToolSchema[], playbooks: P
   }
 
   const steps: Omit<PlanStep, 'id'>[] = picked.map((entry) => {
-    const mandatory = entry.score >= CONFIDENT_TOOL_SCORE && !underdetermined
+    // "Explain how a lithium-ion battery degrades" mentions a battery but is not
+    // about this Mac, so the read is offered rather than forced.
+    const aboutThisMac = !MACHINE_READ.test(entry.name) || MACHINE_CONTEXT.test(objective)
+    const mandatory = entry.score >= CONFIDENT_TOOL_SCORE && !underdetermined && aboutThisMac
     return {
       title: entry.title,
       kind: isReading(entry.name) ? 'gather' : 'act',
@@ -183,6 +203,15 @@ export function planForTurn(objective: string, tools: ToolSchema[], playbooks: P
       ...(mandatory ? {} : { optional: true })
     }
   })
+  if (needsResearch) {
+    steps.push({
+      title: `Look up ${objective.slice(0, 90)}`,
+      kind: 'gather',
+      tool: 'research',
+      accept: acceptFor('research'),
+      requiresEvidence: true
+    })
+  }
   steps.push({ title: 'Answer from what the tools returned', kind: 'answer' })
 
   const citations = citationRequirement(objective)

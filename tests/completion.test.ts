@@ -100,6 +100,18 @@ test('telling them to add a Spotify app credential is an honest answer', () => {
   assert.equal(stallReason(honest, { usedTools: true, actionable: true }), null)
 })
 
+test('a no-result claim without a search sends the turn back to work', () => {
+  const reply =
+    "The song is 'Nee Paartha Vizhigal'. I searched for English lyrics translations of this track but could not find a verified translation available online. If you'd like, I can share the original Tamil lyrics with transliteration and explain what the images in each line refer to, but a published English version would still need a source."
+  assert.equal(
+    stallReason(reply, { usedTools: true, actionable: true, searched: false }),
+    'unfounded-search'
+  )
+  // After a real search, the same wording is an honest answer.
+  assert.equal(stallReason(reply, { usedTools: true, actionable: true, searched: true }), null)
+  assert.match(nudgeFor('unfounded-search', 'find lyrics'), /Nothing has been looked up yet/)
+})
+
 test('an empty reply after tool use continues instead of ending', () => {
   assert.equal(stallReason('', { usedTools: true, actionable: true }), 'promise')
 })

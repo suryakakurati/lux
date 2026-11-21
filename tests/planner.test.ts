@@ -90,6 +90,24 @@ test('a generic verb does not turn a lookup into a local file search', () => {
   assert.equal(plan.steps.some((step) => step.tool === 'find_files'), false)
 })
 
+test('a request for outside information plans a lookup even after a local read', () => {
+  const plan = planForTurn('find the english lyrics translation of the current playing song', TOOLS, [])
+  const tools = plan.steps.map((step) => step.tool)
+  assert.ok(tools.includes('now_playing'))
+  assert.ok(tools.includes('research'))
+  assert.equal(plan.steps.find((step) => step.tool === 'research')?.optional, undefined)
+})
+
+test('a question about batteries in general does not force a machine read', () => {
+  const plan = planForTurn(
+    'explain how a lithium-ion battery degrades over time and how to slow it down',
+    TOOLS,
+    []
+  )
+  const battery = plan.steps.find((step) => step.tool === 'battery_status')
+  assert.equal(battery?.optional, true)
+})
+
 test('small talk gets an answer-only plan', () => {
   const plan = planForTurn('Say hello in one short sentence.', TOOLS, [])
   assert.deepEqual(plan.steps.map((step) => step.kind), ['answer'])

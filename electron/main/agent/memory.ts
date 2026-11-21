@@ -99,7 +99,7 @@ export class Memory {
   }
 
   /** Similar past exchanges for the current request, most relevant first. */
-  async recall(query: string, k = 4): Promise<string[]> {
+  async recall(query: string, k = 6): Promise<string[]> {
     const entries = this.data.entries.filter((entry) => this.usable(entry))
     if (entries.length === 0) return []
     const mode = this.config().mode
@@ -135,7 +135,7 @@ export class Memory {
     return `${userLine?.slice(0, 180) ?? ''} → ${this.excerpt(reply)}`
   }
 
-  private excerpt(reply: string, max = 280): string {
+  private excerpt(reply: string, max = 480): string {
     if (reply.length <= max) return reply
     const window = reply.slice(0, max)
     const sentence = /\.\s/.exec(window)

@@ -31,10 +31,13 @@ export const DEFAULT_SETTINGS: Settings = {
   embeddingModel: 'nomic-embed-text:latest',
   specializedModel: '',
   ollamaUrl: 'http://127.0.0.1:11434',
-  // 16K is the smallest window that holds the system prompt, a few tool
-  // results and a real conversation. 8K left no room for history on research.
-  contextWindow: 16384,
-  maxOutputTokens: 1536,
+  // 24K holds the system prompt, several tool results and a real conversation.
+  // 8K left no room for history, and 32K starts to compete for memory on a
+  // 16 GB Mac, so this is the largest comfortable default.
+  contextWindow: 24576,
+  // A full explanation needs room; 1,536 truncated anything longer than a
+  // couple of paragraphs.
+  maxOutputTokens: 4096,
   modelKeepAlive: '30m',
   memoryMode: 'lexical',
   speechEnabled: true,
@@ -96,8 +99,8 @@ export function saveSettings(patch: Partial<Settings>): Settings {
   if (!settingsStore) settingsStore = new Store<Settings>(join(dataDir(), 'settings.json'), DEFAULT_SETTINGS)
   const next: Settings = { ...getSettings(), ...patch }
   if (next.openChatThreshold < 40) next.openChatThreshold = 40
-  next.contextWindow = Math.min(65_536, Math.max(2_048, Number(next.contextWindow) || 16_384))
-  next.maxOutputTokens = Math.min(8_192, Math.max(256, Number(next.maxOutputTokens) || 1_536))
+  next.contextWindow = Math.min(65_536, Math.max(2_048, Number(next.contextWindow) || 24_576))
+  next.maxOutputTokens = Math.min(8_192, Math.max(256, Number(next.maxOutputTokens) || 4_096))
   if (!next.modelKeepAlive.trim()) next.modelKeepAlive = '30m'
   if (next.theme !== 'light' && next.theme !== 'dark') next.theme = 'system'
   if (next.memoryMode !== 'lexical' && next.memoryMode !== 'semantic') next.memoryMode = 'lexical'

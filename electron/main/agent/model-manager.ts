@@ -80,8 +80,8 @@ export class ModelManager {
     const settings = this.settings()
     return {
       keepAlive: settings.keepModelLoaded ? settings.modelKeepAlive || '30m' : '0',
-      numCtx: settings.contextWindow || 16_384,
-      numPredict: settings.maxOutputTokens || 1_536
+      numCtx: settings.contextWindow || 24_576,
+      numPredict: settings.maxOutputTokens || 4_096
     }
   }
 
@@ -125,8 +125,8 @@ export class ModelManager {
           stream: false,
           keep_alive: '0',
           options: {
-            num_ctx: settings.contextWindow || 16_384,
-            num_predict: settings.maxOutputTokens || 1_536,
+            num_ctx: settings.contextWindow || 24_576,
+            num_predict: settings.maxOutputTokens || 4_096,
             temperature: 0.25
           }
         }),

@@ -91,6 +91,28 @@ const RESEARCH_TIME_BUDGET_MS = 600_000
 const MAX_NUDGES = 2
 const MAX_PARALLEL_TOOLS = 3
 
+/**
+ * Tools that actually retrieve evidence. A no-result claim after one of these
+ * is an answer; after only a resolver such as now_playing it is an excuse.
+ */
+const RETRIEVAL_TOOLS = new Set([
+  'web_search',
+  'research',
+  'web_read',
+  'news_digest',
+  'browser_open',
+  'browser_read',
+  'browser_inspect',
+  'site_open',
+  'history_search',
+  'find_files',
+  'search_notes',
+  'vault_search',
+  'vault_read',
+  'agni_links',
+  'agni_report'
+])
+
 interface PreparedCall {
   call: ResolvedCall
   run: ToolRun
@@ -194,8 +216,8 @@ export async function runAgent(input: AgentInput): Promise<AgentOutcome> {
     }
   }
   const contextCharsBudget = contextBudgetChars(
-    input.settings.contextWindow || 16_384,
-    input.settings.maxOutputTokens || 1_536
+    input.settings.contextWindow || 24_576,
+    input.settings.maxOutputTokens || 4_096
   )
   const startedAt = Date.now()
   const researchPlan = plan.steps.some(
@@ -332,8 +354,8 @@ export async function runAgent(input: AgentInput): Promise<AgentOutcome> {
 
       const modelOptions = input.models?.chatOptions() ?? {
         keepAlive: input.settings.keepModelLoaded ? input.settings.modelKeepAlive || '30m' : '0',
-        numCtx: input.settings.contextWindow || 16_384,
-        numPredict: input.settings.maxOutputTokens || 1_536
+        numCtx: input.settings.contextWindow || 24_576,
+        numPredict: input.settings.maxOutputTokens || 4_096
       }
       if (finalRound) {
         const urls = evidence.urls.slice(0, 8).join('\n')
@@ -430,7 +452,12 @@ export async function runAgent(input: AgentInput): Promise<AgentOutcome> {
           continue
         }
 
-        const stall = stallReason(reply, { usedTools: hadTools, actionable, toolUnavailable })
+        const stall = stallReason(reply, {
+          usedTools: hadTools,
+          actionable,
+          toolUnavailable,
+          searched: evidence.tools.some((tool) => tool.ok && RETRIEVAL_TOOLS.has(tool.name))
+        })
 
         if (stall && nudges < MAX_NUDGES && round < roundLimit - 1) {
           nudges += 1
@@ -517,6 +544,20 @@ export async function runAgent(input: AgentInput): Promise<AgentOutcome> {
           content: outcome.next_hint ? `${modelData}\n\nNext: ${outcome.next_hint}` : modelData
         })
         task?.tool(item.call.name, outcome.ok, outcome.summary, outcome.data, item.call.args)
+      }
+
+      // The resolver said there is nothing to look at (Spotify closed, an ad, no
+      // track, no site). Forcing the dependent lookup then searches for "current
+      // song" and burns a minute, so let the turn answer with that fact instead.
+      if (toolUnavailable) {
+        plan = {
+          ...plan,
+          steps: plan.steps.map((step) =>
+            step.kind === 'gather' || step.kind === 'act'
+              ? { ...step, optional: true, note: step.note ?? 'the resolver reported nothing available' }
+              : step
+          )
+        }
       }
 
       // Verify against what actually ran, then repair at most one blocked step.

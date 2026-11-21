@@ -626,8 +626,8 @@ export class Session {
    */
   private historyMessages(settings: Settings): OllamaMessage[] {
     const promptChars = contextBudgetChars(
-      settings.contextWindow || 16_384,
-      settings.maxOutputTokens || 1_536
+      settings.contextWindow || 24_576,
+      settings.maxOutputTokens || 4_096
     )
     const budget = Math.min(28_000, Math.max(8_000, Math.round(promptChars * 0.45)))
     const messages: OllamaMessage[] = []

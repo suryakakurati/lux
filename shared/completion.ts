@@ -69,7 +69,17 @@ export function endsWithQuestion(text: string): boolean {
   return QUESTION_END.test(text.trim())
 }
 
-export type StallKind = 'promise' | 'offer' | 'false-limit' | 'truncated'
+/**
+ * "I searched… but could not find it" when no search ever ran. A track title was
+ * read, so the reply sounds grounded while the actual lookup never happened.
+ */
+const SEARCH_CLAIM =
+  /\b(?:i (?:searched|looked (?:it )?up|checked (?:the web|online|the internet))|after searching|search results? (?:did not|didn't|showed no)|nothing (?:came back|turned up))\b/i
+
+const NO_RESULT =
+  /\b(?:could(?:n'?t| not) find|no (?:verified|reliable|official|usable) (?:translation|lyrics|source|information|results?)|(?:not|isn'?t) available online|no results?)\b/i
+
+export type StallKind = 'promise' | 'offer' | 'false-limit' | 'unfounded-search' | 'truncated'
 
 export interface StopContext {
   /** At least one tool has run this turn. */
@@ -78,6 +88,8 @@ export interface StopContext {
   actionable: boolean
   /** The tool's answer was "nothing is running"; offering the next step is fine. */
   toolUnavailable?: boolean
+  /** A retrieval tool actually ran this turn (web, files, notes, history, vault). */
+  searched?: boolean
 }
 
 /**
@@ -110,6 +122,13 @@ export function stallReason(text: string, context: StopContext): StallKind | nul
   const canAct = context.usedTools || context.actionable
   if (!canAct) return null
   if (promisesAction(reply)) return 'promise'
+  // A no-result claim is only a stall when nothing was actually searched. After
+  // a real empty search it is an answer, and repeating it would loop. This is
+  // checked before the closing offer: "I looked but could not find it" is the
+  // more precise diagnosis, and it carries the directive to search.
+  if (!context.searched && (SEARCH_CLAIM.test(reply) || NO_RESULT.test(reply))) {
+    return 'unfounded-search'
+  }
   // A closing "want me to play one?" after a real set of recommendations is an
   // answer with an offer attached, not a turn that died. Only a short reply that
   // offers instead of delivering is a stall.
@@ -128,6 +147,9 @@ export function nudgeFor(kind: StallKind, objective: string): string {
   const target = objective.trim() || 'the request'
   if (kind === 'truncated') {
     return `Your last reply stopped before it answered: ${target}. Write the complete answer now from the evidence already gathered. Do not restart the research, and do not call another tool unless a specific fact is missing.`
+  }
+  if (kind === 'unfounded-search') {
+    return `Nothing has been looked up yet for: ${target}. Call web_search or research with the concrete title, artist or headline — not the words "current song" or "this page" — then answer from the result. If the source truly has nothing, name the source you read.`
   }
   if (kind === 'false-limit') {
     return `You have the tools for this: ${target}. Do not describe a limitation. Call the tool that reads it now, then answer from what it returned.`
