@@ -97,6 +97,7 @@ function startSay(
   const args = ['-r', String(rate)]
   if (voice) args.push('-v', voice)
   args.push(spoken)
+  logLine('voice', voice ? `say ${voice}` : 'say default voice')
 
   let child: ChildProcess
   try {
