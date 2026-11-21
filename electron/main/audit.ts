@@ -40,7 +40,7 @@ const CASES: AuditCase[] = [
   { group: 'system', tool: 'battery_status' },
   { group: 'system', tool: 'get_volume' },
   { group: 'clipboard', tool: 'clipboard_read' },
-  { group: 'timers', tool: 'list_timers' },
+  { group: 'timers', tool: 'timer', args: { action: 'list' } },
   {
     group: 'commitments',
     tool: 'commitments',

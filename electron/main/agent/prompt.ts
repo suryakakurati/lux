@@ -24,8 +24,11 @@ export interface PromptContext {
 }
 
 export function buildSystemPrompt(context: PromptContext): string {
+  // The year belongs here: without it the model invented one from training
+  // data when asked to write down today's date.
   const time = context.now.toLocaleString('en-US', {
     weekday: 'long',
+    year: 'numeric',
     month: 'long',
     day: 'numeric',
     hour: 'numeric',

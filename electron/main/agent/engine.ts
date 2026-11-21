@@ -240,6 +240,10 @@ async function residentModels(url: string): Promise<string[]> {
 /**
  * An empty `/api/generate` is Ollama's documented way to load a model without
  * producing a reply; `keep_alive` matches the chat requests Lux makes.
+ *
+ * `num_ctx` must match the chat requests too: warming at Ollama's 4K default
+ * made the first real turn reload the model at 24K, which cost seconds and left
+ * the resident model reporting a context the app never used.
  */
 async function warmModel(settings: Settings): Promise<{ ok: boolean; missing?: boolean; detail?: string }> {
   try {
@@ -248,8 +252,10 @@ async function warmModel(settings: Settings): Promise<{ ok: boolean; missing?: b
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: settings.model,
+        prompt: '',
         stream: false,
-        keep_alive: settings.modelKeepAlive || '30m'
+        keep_alive: settings.modelKeepAlive || '30m',
+        options: { num_ctx: settings.contextWindow || 24_576 }
       }),
       signal: AbortSignal.timeout(180_000)
     })

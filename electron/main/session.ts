@@ -325,9 +325,29 @@ export class Session {
           : 'This is about their own listening. Call music_taste before saying anything, then recommend from what it returns. Do not ask what genres they like.'
       )
     }
+    if (/\b(?:which|what)\b[^.?!]*\bapps?\b[^.?!]*\bmemory\b|\bmemory\b[^.?!]*\bapps?\b/i.test(text)) {
+      hints.push(
+        'Call top_processes to rank running apps by memory. list_apps only lists installed apps, so it cannot answer this and must not be used alone.'
+      )
+    }
+    if (/\b(?:read|show|repeat|tell)\b[^.?!]*\b(?:it|that|note)\b[^.?!]*\bback\b/i.test(text)) {
+      hints.push(
+        'To read a whole note back, call read_note with its title. vault_read reads the separate Obsidian vault and will not find a note Lux wrote with write_note.'
+      )
+    }
+    if (/\bclipboard\b/i.test(text) && /\b(?:copy|put|paste|set|add)\b/i.test(text)) {
+      hints.push(
+        'Call clipboard_write with the exact text they named, then clipboard_read to confirm. Never say you copied something unless clipboard_write returned ok; clipboard_read alone does not change the clipboard.'
+      )
+    }
+    if (/\b(?:what time|what'?s the time|what day|how long (?:until|till|before))\b/i.test(text)) {
+      hints.push(
+        'The current date and time are in Current context. Answer from it directly; do not call run_shell to read the clock.'
+      )
+    }
     if (captured && !captured.duplicate) {
       hints.push(
-        `This message was also recorded in the commitment ledger as "${captured.item.text}" (${captured.item.id}). Do not add it again, and do not say you cannot remember it.`
+        `This message was also recorded in the commitment ledger as "${captured.item.text}" (${captured.item.id}). Do not add it again, and do not say you cannot remember it. Call commitments with action "list" to report everything that is still open.`
       )
     }
     const hint = hints.length > 0 ? hints.join(' ') : undefined

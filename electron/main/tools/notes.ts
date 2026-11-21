@@ -86,6 +86,37 @@ export const noteTools: ToolDef[] = [
     }
   },
   {
+    name: 'read_note',
+    description:
+      'Read one of your Lux notes in full by title. Use this to read back a note you just wrote. The vault_* tools read a separate Obsidian vault and will not find Lux notes.',
+    risk: 'safe',
+    parallelSafe: true,
+    params: {
+      type: 'object',
+      properties: {
+        title: { type: 'string', description: 'Note title, with or without .md.' }
+      },
+      required: ['title']
+    },
+    async run(args, context) {
+      const dir = expandHome(context.settings.notesDir)
+      const wanted = safeName(String(args.title ?? '')).replace(/\.md$/i, '')
+      if (!wanted) return { content: 'Which note should I read?', summary: 'no title' }
+      const path = join(dir, `${wanted}.md`)
+      if (!existsSync(path)) {
+        const found = existsSync(dir) ? await searchMarkdown([dir], wanted, 1) : []
+        return {
+          content: found[0]
+            ? `No note titled "${wanted}". The closest match is "${found[0].title}".`
+            : `No note titled "${wanted}" in ${dir}.`,
+          summary: 'note not found'
+        }
+      }
+      const text = readFileSync(path, 'utf8')
+      return { content: text.slice(0, 6_000), summary: `read: ${wanted}`, openChat: false }
+    }
+  },
+  {
     name: 'remember',
     description:
       'Store a durable fact about the person (preferences, names, routines) that should be recalled in future conversations.',

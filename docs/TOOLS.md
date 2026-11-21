@@ -1,6 +1,6 @@
 # Tool catalog
 
-57 tools. Everything runs locally except the pages that are inherently remote (news, `web_read`,
+58 tools. Everything runs locally except the pages that are inherently remote (news, `web_read`,
 `web_search`, `research`, the agent browser and Spotify lookups). `risk: confirm` means the turn
 pauses for explicit approval.
 
@@ -13,6 +13,7 @@ pauses for explicit approval.
 | `system_status` | safe | — | CPU load, memory, disk, battery, volume; opens chat |
 | `set_volume` | safe | `level` 0–100 | system output volume |
 | `get_volume` | safe | — | volume + mute settings |
+| `top_processes` | safe | `limit?` | processes ranked by memory, per-app totals; answers "which apps are using the most memory" |
 | `toggle_appearance` | safe | `mode` | light / dark / toggle via System Events |
 | `lock_screen` | safe | — | `CGSession -suspend`, keystroke fallback |
 | `sleep_display` | safe | — | `pmset displaysleepnow` |
@@ -25,10 +26,11 @@ pauses for explicit approval.
 | `apple_music_control` | safe | `action` | Music.app play / pause / next |
 | `browse` | safe | `action`, `url?`, `query?`, `engine?`, `app?` | open a URL or run a web search in the person's browser (`default`, `firefox`, `safari`, `chrome`, `brave`, `arc`, `edge`) |
 | `news_digest` | safe | `topic?`, `limit` | Google News RSS headlines; opens chat |
-| `find_files` | safe | `query`, `limit` | Spotlight `mdfind`, filters system paths |
+| `find_files` | safe | `query`, `limit` | Spotlight `mdfind`; regular files only, newest first, each with size and modification time |
 | `open_path` | safe | `path` | `open` a file or folder |
 | `quick_look` | safe | `path` | `qlmanage -p` |
 | `write_note` | safe | `title?`, `body`, `append` | markdown into the notes folder / daily note |
+| `read_note` | safe | `title` | reads a Lux note in full, so a written note can be read back |
 | `search_notes` | safe | `query`, `limit` | notes folder + optional Obsidian vault; opens chat |
 | `remember` | safe | `fact` | durable fact for future turns |
 | `commitments` | safe | `action`, `text?`, `due?`, `target?`, `minutes?` | list, add, complete, snooze or read the deterministic morning brief |

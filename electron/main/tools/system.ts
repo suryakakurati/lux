@@ -27,6 +27,51 @@ export const systemTools: ToolDef[] = [
     }
   },
   {
+    name: 'top_processes',
+    description:
+      'List the processes using the most memory right now, largest first. Use this for "which apps are using the most memory" — list_apps only lists installed apps.',
+    risk: 'safe',
+    parallelSafe: true,
+    params: {
+      type: 'object',
+      properties: {
+        limit: {
+          type: 'integer',
+          description: 'How many processes to return (default 5, max 15).',
+          minimum: 1,
+          maximum: 15
+        }
+      }
+    },
+    async run(args) {
+      const limit = Math.min(15, Math.max(1, Number(args.limit ?? 5)))
+      const result = await exec('/bin/ps', ['-axo', 'rss=,comm='], { timeout: 5_000 })
+      if (result.code !== 0) {
+        return { content: `Could not read the process table: ${truncate(result.stderr, 120)}`, summary: 'ps failed' }
+      }
+      // Chrome and Electron spawn many helpers; one row per app is what the
+      // question is actually about.
+      const totals = new Map<string, number>()
+      for (const line of result.stdout.split('\n')) {
+        const match = /^\s*(\d+)\s+(.+)$/.exec(line)
+        if (!match) continue
+        const kb = Number(match[1])
+        const name = (match[2].split('/').pop() ?? match[2]).trim()
+        if (!name) continue
+        totals.set(name, (totals.get(name) ?? 0) + kb)
+      }
+      const rows = [...totals.entries()]
+        .map(([name, kb]) => ({ name, mb: kb / 1_024 }))
+        .sort((a, b) => b.mb - a.mb)
+        .slice(0, limit)
+      if (rows.length === 0) return { content: 'The process table was empty.', summary: 'no processes' }
+      return {
+        content: rows.map((row) => `${row.name} — ${row.mb.toFixed(0)} MB`).join('\n'),
+        summary: `${rows[0].name} ${rows[0].mb.toFixed(0)}MB top`
+      }
+    }
+  },
+  {
     name: 'set_volume',
     description: 'Set the Mac output volume. Also handles mute (0) and full volume (100).',
     risk: 'safe',
