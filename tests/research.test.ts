@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { extractExcerpt } from '../electron/main/research.ts'
+import { normalizeSearchQuery } from '../electron/main/web/search.ts'
 
 const PAGE = [
   'Navigation Home Products Pricing Contact Sign in',
@@ -15,6 +16,12 @@ test('extraction chooses paragraphs that discuss the question', () => {
   assert.match(excerpt, /quantised models/)
   assert.match(excerpt, /M4/)
   assert.doesNotMatch(excerpt, /Privacy policy/)
+})
+
+test('a question is turned into a query about its subject', () => {
+  assert.equal(normalizeSearchQuery('who wrote the song Dynamite by BTS'), 'song Dynamite by BTS')
+  assert.equal(normalizeSearchQuery('please find me the weather in Boston'), 'weather in Boston')
+  assert.equal(normalizeSearchQuery('Dynamite BTS lyrics'), 'Dynamite BTS lyrics')
 })
 
 test('extraction keeps a bounded result and falls back for short pages', () => {

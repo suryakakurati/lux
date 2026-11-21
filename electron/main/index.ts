@@ -25,6 +25,8 @@ import { Proactive } from './proactive'
 import { Session } from './session'
 import { Transcriber } from './stt'
 import { notifyNative } from './tools/misc'
+import { setSearchRender } from './web/search'
+import { disposeSearchWindow, searchWebInBrowser } from './web/browser-search'
 import { resolveVoice, speak, stopSpeaking } from './tts'
 import { createTray } from './tray'
 import {
@@ -78,6 +80,9 @@ async function bootstrap(): Promise<void> {
   installAppMenu()
 
   const settings = getSettings()
+  // HTTP search endpoints answer a plain fetch with a CAPTCHA; a search that
+  // finds nothing is retried in the app's own Chromium.
+  setSearchRender(searchWebInBrowser)
   // The saved preference drives Chromium and every native control. Set it
   // before the first window so there is no flash of the wrong appearance.
   nativeTheme.themeSource = settings.theme
@@ -295,6 +300,7 @@ async function bootstrap(): Promise<void> {
 
   app.on('before-quit', () => {
     quitting = true
+    disposeSearchWindow()
     hotkey?.stop()
     engine.stop()
     proactive?.stop()

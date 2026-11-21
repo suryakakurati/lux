@@ -15,6 +15,8 @@ import { getSettings } from './config'
 import { initLog } from './log'
 import { batteryInfo, frontmostApp, outputVolume, runningApps } from './mac/stats'
 import type { ToolContext } from './tools/types'
+import { setSearchRender } from './web/search'
+import { searchWebInBrowser } from './web/browser-search'
 
 app.setName('Lux')
 app.dock?.hide()
@@ -22,6 +24,7 @@ app.dock?.hide()
 async function main(): Promise<void> {
   await app.whenReady()
   initLog()
+  setSearchRender(searchWebInBrowser)
   if (process.env.LUX_DUMP_TOOLS) {
     const { toolDefinitions } = await import('./tools')
     const { writeFileSync } = await import('node:fs')

@@ -1,5 +1,5 @@
 import { research } from '../research'
-import { searchWeb } from '../web/search'
+import { normalizeSearchQuery, searchWeb } from '../web/search'
 import type { ToolDef } from './types'
 
 export const researchTools: ToolDef[] = [
@@ -26,9 +26,11 @@ export const researchTools: ToolDef[] = [
       },
       required: ['query']
     },
-    timeoutMs: 20_000,
+    // Enough room for the rendered Chromium fallback when the HTTP endpoint is
+    // blocked; an ordinary search answers in under a second.
+    timeoutMs: 60_000,
     async run(args) {
-      const query = normalizeQuery(String(args.query ?? ''))
+      const query = normalizeSearchQuery(String(args.query ?? ''))
       if (query.length < 2) return { content: 'Give me a search query.', summary: 'empty search' }
       // A reference only this Mac can resolve is not a query. Searching it
       // returns generic pages about the words themselves, which is how a
@@ -46,6 +48,13 @@ export const researchTools: ToolDef[] = [
       const limit = Math.min(12, Math.max(1, Number(args.limit ?? 8)))
       const result = await searchWeb(query, limit, args.fresh === true)
       if (result.hits.length === 0) {
+        // An outage must never be reported as "the web has nothing".
+        if (result.blocked) {
+          return {
+            content: `The search providers rate-limited this Mac, so "${query}" could not be checked. That is a tooling failure, not evidence that nothing exists. Tell the user the search was blocked, and either open a site they name with browser_open or answer from what you already know and label it as unverified. Do not claim the thing does not exist.`,
+            summary: 'search blocked by provider'
+          }
+        }
         return {
           content: `No search results for "${query}". Try a broader query, or use browser_open with a known URL.`,
           summary: 'no search results'
@@ -93,12 +102,12 @@ export const researchTools: ToolDef[] = [
     },
     timeoutMs: 90_000,
     async run(args) {
-      const query = normalizeQuery(String(args.query ?? ''))
+      const query = normalizeSearchQuery(String(args.query ?? ''))
       if (query.length < 3) return { content: 'State the research question.', summary: 'empty research' }
       const latestIntent = /\b(latest|recent|new|news|developments?|updates?|releases?)\b/i.test(query)
       const extra = String(args.queries ?? '')
         .split(/[\n|;]+/)
-        .map((line) => normalizeQuery(line.trim(), latestIntent))
+        .map((line) => normalizeSearchQuery(line.trim(), latestIntent))
         .filter(Boolean)
       const maxSources = Math.min(6, Math.max(1, Number(args.maxSources ?? 4)))
       const result = await research(query, extra, maxSources)
@@ -111,28 +120,6 @@ export const researchTools: ToolDef[] = [
     }
   }
 ]
-
-/**
- * Turn a request-shaped phrase into a search query. "Find the english lyrics
- * translation of the song" is a request, not a query; leading politeness and
- * generic verbs only dilute the index. A stale year in a "latest" query is a
- * model habit, not a user constraint.
- */
-function normalizeQuery(value: string, force = false): string {
-  const clean = value
-    .replace(/\s+/g, ' ')
-    .trim()
-    .replace(/^(?:please\s+)?(?:can you\s+|could you\s+)?(?:find(?: me)?|search(?: for)?|look up|google|show me|tell me|get me)\s+/i, '')
-    .replace(/^(?:the|a|an)\s+/i, '')
-    .trim()
-  if (!clean) return value.replace(/\s+/g, ' ').trim()
-  if (!force && !/\b(latest|recent|new|news|developments?|updates?|releases?)\b/i.test(clean)) return clean
-  const year = new Date().getFullYear()
-  return clean
-    .replace(/\b(20\d{2})\b/g, (match) => (Number(match) < year ? '' : match))
-    .replace(/\s+/g, ' ')
-    .trim()
-}
 
 function today(): string {
   return new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
