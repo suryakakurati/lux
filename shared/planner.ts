@@ -121,7 +121,8 @@ const EXTERNAL_INFO =
 
 /** Machine reads only make sense when the request is about this Mac's state. */
 const MACHINE_READ = /^(?:battery_status|get_volume|system_status)$/
-const MACHINE_CONTEXT = /\b(my|our|this (?:mac|laptop|machine)|current(?:ly)?|right now|level|percentage|percent|left|charging|plugged|muted?)\b/i
+const MACHINE_CONTEXT =
+  /\b(my|our|this (?:mac|laptop|machine)|current(?:ly)?|right now|level|percentage|percent|left|charging|plugged|muted?|volume|loud|speakers?)\b/i
 
 function wantsSources(objective: string): boolean {
   return /\b(?:cite|cited|citations?|sources?|references?)\b/i.test(objective)

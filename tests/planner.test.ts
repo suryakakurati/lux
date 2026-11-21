@@ -36,6 +36,8 @@ test('a read question chooses the reader even when another description repeats t
   ]
   const plan = planForTurn("What's the output volume?", tools, [])
   assert.equal(plan.steps[0].tool, 'get_volume')
+  // A live level must be read, not recalled from a prompt snapshot.
+  assert.equal(plan.steps[0].optional, undefined)
 })
 
 test('a compound request keeps its independent reads', () => {
