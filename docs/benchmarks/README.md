@@ -127,6 +127,35 @@ baseline.
   is not a citation, and an invented URL fails the task.
 - 2 deliberately ambiguous turns; one may pass by asking one targeted question
 
+## V.0.1 baseline
+
+Measured 2026-11-21 from clean commit `0999ac2` (`v0.1-overhaul`), three runs,
+`qwen3.5:latest` digest `6488c96fa5fa`, greedy sampling.
+
+| Result | Value |
+| --- | --- |
+| Tasks passing every run | 19 / 20 |
+| Turn runs passing | 59 / 60 |
+| `ollama-release` | 2 / 3 runs |
+| Median wall | 20,768 ms |
+| Median TTFT | 16,230 ms |
+| Trivial median | 13,754 ms |
+| One-tool median | 20,086 ms |
+| Multi-tool median | 32,727 ms |
+| Research median | 156,286 ms |
+| Cache reuse | 65% |
+| Cold start | 5,343 ms |
+| Idle RSS | 538 MB |
+
+`ollama-release` is reported flaky, not passed: one run used its eight-round
+budget and still ended without a source URL. The other two runs cited a backed
+URL. The failure is a missing citation, not an invented one, and the benchmark
+keeps it visible instead of averaging it away.
+
+The V.0 report was a single run from an uncommitted harness, so comparisons are
+directional rather than controlled: the task mix, citation checks and round
+limits all changed.
+
 ## Caveats
 
 - Single-machine measurements on an M4 MacBook Air, 16 GB. Not a controlled lab.
