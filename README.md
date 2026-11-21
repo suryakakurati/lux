@@ -252,8 +252,36 @@ dirty tree at commit `5874f7b`. It is a focused comparison, not a new verified b
 | Median time to first spoken word | 19.2 s | 8.6 s | −55% |
 | Idle RSS | 538 MB | 372 MB | −31% |
 
-The full 20-task suite has not been rerun since Phase 2. `docs/PERFORMANCE.md` lists what changed and
-the current limits.
+**24K-context baseline** (`v0.1-24k-baseline.json`, commit `df2a575`, the full 20 tasks, three
+runs, 24,576-token context and 4,096 max output — the current defaults). Compared with the verified
+8K baseline:
+
+| Metric | 8K baseline | 24K baseline | Change |
+| --- | --- | --- | --- |
+| Tasks passing every run | 19 / 20 | 20 / 20 | +1 |
+| Median wall time | 20.8 s | 16.5 s | −20% |
+| Median time to first token | 16.2 s | 13.0 s | −20% |
+| Trivial median | 13.8 s | 13.1 s | −5% |
+| One-tool median | 20.1 s | 15.9 s | −21% |
+| Multi-tool median | 32.7 s | 38.9 s | +19% |
+| Research median | 156.3 s | 264.2 s | +69% |
+| KV-cache reuse | 65% | 62% | −3 pp |
+| Median model rounds | 2 | 1 | −1 |
+| Cold start to engine ready | 5.3 s | 5.6 s | +0.3 s |
+| Idle RSS | 538 MB | 252 MB | −53% |
+
+Every task passed all three runs, so nothing is flaky and `ollama-release` — 2/3 in the 8K baseline —
+is now 3/3. Shallow turns got faster: one tool reads, trivial answers and time-to-first-token all
+improved despite the window growing threefold.
+
+The deeper turns got slower, and the reason is visible in the reports: research now actually reads
+the pages it finds. At 8K a research turn often ended after a failed search; the current search
+stack returns real pages, so research turns spend 6–7 rounds reading and citing them (3/3, 2/2 and
+1/1 citations backed). That is more work, not a stall — but it is slower, and the table says so. The
+multi-tool median is dominated by `battery-files`, which needs a second model round.
+
+Idle RSS is a separate 60-second process-tree sample taken after the run (Ollama excluded); it is
+attached to the report with its own timestamp. `docs/PERFORMANCE.md` lists the current limits.
 
 ## Privacy and safety
 
@@ -291,8 +319,8 @@ See [`docs/SECURITY.md`](docs/SECURITY.md) for the threat model.
 - Web search providers can rate-limit this machine. Lux then renders the same query in its own
   Chromium (Brave, then DuckDuckGo) and, if that is blocked too, says the search was blocked instead
   of claiming the thing does not exist.
-- The benchmark's `ollama-release` task is flaky at 2/3 runs. The full suite has not been rerun since
-  the Phase 2 changes.
+- The benchmark's `ollama-release` task was flaky at 2/3 runs on the 8K baseline; it passes 3/3 on
+  the current 24K baseline. Research turns remain the slow category, and the reports say so.
 
 ![Light theme](docs/screenshots/chat-light.png)
 

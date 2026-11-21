@@ -1,0 +1,802 @@
+{
+  "meta": {
+    "schema": 2,
+    "harness": "lux-bench@2",
+    "generatedAt": "2026-11-21T17:45:00.951Z",
+    "startedAt": "2026-11-21T16:51:28.696Z",
+    "endedAt": "2026-11-21T17:45:00.951Z",
+    "durationMs": 3212255,
+    "command": "bench:baseline",
+    "baseline": true,
+    "verified": true,
+    "commit": "df2a575",
+    "branch": "v0.1-overhaul",
+    "dirty": false,
+    "diffHash": "272dd683734c0c2a19ad7fe846b532cacbebd776e124299607c2d47db5ea070e",
+    "taskSetHash": "df02ec1f956acdb12a6920f0f45425f52bf0918ff1775afb90e451f29f0d358e",
+    "runs": 3,
+    "sampling": {
+      "temperature": 0,
+      "topK": 1,
+      "topP": 1,
+      "seed": 42,
+      "repeatPenalty": 1
+    },
+    "model": "qwen3.5:latest",
+    "modelDigest": "6488c96fa5faab64bb65cbd30d4289e20e6130ef535a93ef9a49f42eda893ea7",
+    "ollamaUrl": "http://127.0.0.1:11434",
+    "ollamaVersion": "0.40.3",
+    "coldStartMs": 5603,
+    "toolCount": 56,
+    "machine": {
+      "platform": "darwin",
+      "arch": "arm64",
+      "cpu": "Apple M4",
+      "cores": 10,
+      "totalMemGb": 16,
+      "node": "24.22.3",
+      "electron": "45.3.3"
+    },
+    "settings": {
+      "contextWindow": 24576,
+      "maxOutputTokens": 4096,
+      "modelKeepAlive": "30m",
+      "memoryMode": "lexical",
+      "keepModelLoaded": true
+    },
+    "idleRss": {
+      "idleRssMb": 252,
+      "source": "docs/benchmarks/idle-rss.json",
+      "sampleAt": "2026-11-21T17:48:45.891Z",
+      "stale": false,
+      "note": "Separate process-tree sample taken after the turn run; Ollama is not counted. Use it with its timestamp, not as part of the turn timings."
+    }
+  },
+  "summary": {
+    "count": 20,
+    "successes": 20,
+    "failures": 0,
+    "medianWallMs": 16520,
+    "medianTtftMs": 13015,
+    "medianTtfswMs": 16520,
+    "medianMultiToolWallMs": 38946,
+    "medianMultiToolTtftMs": 21562,
+    "multiToolTurns": 7,
+    "medianTrivialWallMs": 13069,
+    "medianOneToolWallMs": 15884,
+    "medianResearchWallMs": 264209,
+    "promptTokens": 160860,
+    "evalTokens": 3597,
+    "cachedPromptTokens": 99573,
+    "cacheReusePct": 62,
+    "medianRounds": 1,
+    "citationTurns": 4
+  },
+  "samples": [
+    {
+      "count": 20,
+      "successes": 20,
+      "failures": 0,
+      "medianWallMs": 31795.5,
+      "medianTtftMs": 19024.5,
+      "medianTtfswMs": 31760.5,
+      "medianMultiToolWallMs": 48908,
+      "medianMultiToolTtftMs": 21954,
+      "multiToolTurns": 7,
+      "medianTrivialWallMs": 32690,
+      "medianOneToolWallMs": 16775,
+      "medianResearchWallMs": 264209,
+      "promptTokens": 164098,
+      "evalTokens": 3765,
+      "cachedPromptTokens": 83073,
+      "cacheReusePct": 51,
+      "medianRounds": 1,
+      "citationTurns": 4
+    },
+    {
+      "count": 20,
+      "successes": 20,
+      "failures": 0,
+      "medianWallMs": 14686,
+      "medianTtftMs": 11974.5,
+      "medianTtfswMs": 13700,
+      "medianMultiToolWallMs": 38432,
+      "medianMultiToolTtftMs": 21562,
+      "multiToolTurns": 7,
+      "medianTrivialWallMs": 10763,
+      "medianOneToolWallMs": 12854,
+      "medianResearchWallMs": 276758,
+      "promptTokens": 167279,
+      "evalTokens": 3574,
+      "cachedPromptTokens": 105637,
+      "cacheReusePct": 63,
+      "medianRounds": 1,
+      "citationTurns": 4
+    },
+    {
+      "count": 20,
+      "successes": 20,
+      "failures": 0,
+      "medianWallMs": 19586,
+      "medianTtftMs": 13015,
+      "medianTtfswMs": 19586,
+      "medianMultiToolWallMs": 38946,
+      "medianMultiToolTtftMs": 20598,
+      "multiToolTurns": 7,
+      "medianTrivialWallMs": 13069,
+      "medianOneToolWallMs": 21758,
+      "medianResearchWallMs": 206784,
+      "promptTokens": 152234,
+      "evalTokens": 3487,
+      "cachedPromptTokens": 98020,
+      "cacheReusePct": 64,
+      "medianRounds": 1,
+      "citationTurns": 7
+    }
+  ],
+  "tasks": [
+    {
+      "id": "battery",
+      "category": "trivial",
+      "prompt": "What's my battery at?",
+      "runs": 3,
+      "passes": 3,
+      "passRate": 100,
+      "success": true,
+      "flaky": false,
+      "failureReasons": [],
+      "wallMs": 9447,
+      "ttftMs": 7915,
+      "ttfswMs": 9447,
+      "promptTokens": 1413,
+      "evalTokens": 18,
+      "cachedPromptTokens": 763,
+      "cacheReusePct": 54,
+      "rounds": 1,
+      "toolRounds": 1,
+      "toolCalls": [
+        {
+          "name": "battery_status",
+          "status": "ok",
+          "ms": 7
+        }
+      ],
+      "citationsBacked": 0,
+      "citationsUnbacked": 0,
+      "replyChars": 70
+    },
+    {
+      "id": "memory",
+      "category": "trivial",
+      "prompt": "How much memory is this Mac using right now?",
+      "runs": 3,
+      "passes": 3,
+      "passRate": 100,
+      "success": true,
+      "flaky": false,
+      "failureReasons": [],
+      "wallMs": 20813,
+      "ttftMs": 18458,
+      "ttfswMs": 20813,
+      "promptTokens": 4113,
+      "evalTokens": 41,
+      "cachedPromptTokens": 3084,
+      "cacheReusePct": 75,
+      "rounds": 2,
+      "toolRounds": 1,
+      "toolCalls": [
+        {
+          "name": "system_status",
+          "status": "ok",
+          "ms": 171
+        }
+      ],
+      "citationsBacked": 0,
+      "citationsUnbacked": 0,
+      "replyChars": 66
+    },
+    {
+      "id": "volume",
+      "category": "trivial",
+      "prompt": "What's the output volume?",
+      "runs": 3,
+      "passes": 3,
+      "passRate": 100,
+      "success": true,
+      "flaky": false,
+      "failureReasons": [],
+      "wallMs": 12576,
+      "ttftMs": 11888,
+      "ttfswMs": 12576,
+      "promptTokens": 1673,
+      "evalTokens": 9,
+      "cachedPromptTokens": 763,
+      "cacheReusePct": 46,
+      "rounds": 1,
+      "toolRounds": 1,
+      "toolCalls": [
+        {
+          "name": "get_volume",
+          "status": "ok",
+          "ms": 623
+        }
+      ],
+      "citationsBacked": 0,
+      "citationsUnbacked": 0,
+      "replyChars": 25
+    },
+    {
+      "id": "time",
+      "category": "trivial",
+      "prompt": "What time is it right now?",
+      "runs": 3,
+      "passes": 3,
+      "passRate": 100,
+      "success": true,
+      "flaky": false,
+      "failureReasons": [],
+      "wallMs": 15083,
+      "ttftMs": 12949,
+      "ttfswMs": 14853,
+      "promptTokens": 3623,
+      "evalTokens": 18,
+      "cachedPromptTokens": 2611,
+      "cacheReusePct": 72,
+      "rounds": 1,
+      "toolRounds": 0,
+      "toolCalls": [],
+      "citationsBacked": 0,
+      "citationsUnbacked": 0,
+      "replyChars": 39
+    },
+    {
+      "id": "hello",
+      "category": "trivial",
+      "prompt": "Say hello in one short sentence.",
+      "runs": 3,
+      "passes": 3,
+      "passRate": 100,
+      "success": true,
+      "flaky": false,
+      "failureReasons": [],
+      "wallMs": 13069,
+      "ttftMs": 12871,
+      "ttfswMs": 13069,
+      "promptTokens": 3597,
+      "evalTokens": 3,
+      "cachedPromptTokens": 2572,
+      "cacheReusePct": 72,
+      "rounds": 1,
+      "toolRounds": 0,
+      "toolCalls": [],
+      "citationsBacked": 0,
+      "citationsUnbacked": 0,
+      "replyChars": 6
+    },
+    {
+      "id": "system",
+      "category": "one-tool",
+      "prompt": "How is this machine doing — CPU, memory and disk?",
+      "runs": 3,
+      "passes": 3,
+      "passRate": 100,
+      "success": true,
+      "flaky": false,
+      "failureReasons": [],
+      "wallMs": 15884,
+      "ttftMs": 9385,
+      "ttfswMs": 15884,
+      "promptTokens": 1494,
+      "evalTokens": 68,
+      "cachedPromptTokens": 763,
+      "cacheReusePct": 51,
+      "rounds": 1,
+      "toolRounds": 1,
+      "toolCalls": [
+        {
+          "name": "system_status",
+          "status": "ok",
+          "ms": 232
+        }
+      ],
+      "citationsBacked": 0,
+      "citationsUnbacked": 0,
+      "replyChars": 211
+    },
+    {
+      "id": "clipboard",
+      "category": "one-tool",
+      "prompt": "Read my clipboard and tell me what's on it.",
+      "runs": 3,
+      "passes": 3,
+      "passRate": 100,
+      "success": true,
+      "flaky": false,
+      "failureReasons": [],
+      "wallMs": 14525,
+      "ttftMs": 9500,
+      "ttfswMs": 14525,
+      "promptTokens": 1602,
+      "evalTokens": 56,
+      "cachedPromptTokens": 763,
+      "cacheReusePct": 48,
+      "rounds": 1,
+      "toolRounds": 1,
+      "toolCalls": [
+        {
+          "name": "clipboard_read",
+          "status": "ok",
+          "ms": 22
+        }
+      ],
+      "citationsBacked": 0,
+      "citationsUnbacked": 0,
+      "replyChars": 337
+    },
+    {
+      "id": "apps",
+      "category": "one-tool",
+      "prompt": "List a few apps installed on this Mac.",
+      "runs": 3,
+      "passes": 3,
+      "passRate": 100,
+      "success": true,
+      "flaky": false,
+      "failureReasons": [],
+      "wallMs": 30901,
+      "ttftMs": 14987,
+      "ttfswMs": 30901,
+      "promptTokens": 2146,
+      "evalTokens": 165,
+      "cachedPromptTokens": 763,
+      "cacheReusePct": 36,
+      "rounds": 1,
+      "toolRounds": 1,
+      "toolCalls": [
+        {
+          "name": "list_apps",
+          "status": "ok",
+          "ms": 20
+        }
+      ],
+      "citationsBacked": 0,
+      "citationsUnbacked": 0,
+      "replyChars": 675
+    },
+    {
+      "id": "files",
+      "category": "one-tool",
+      "prompt": "Find files on this Mac whose name contains 'screenshot'.",
+      "runs": 3,
+      "passes": 3,
+      "passRate": 100,
+      "success": true,
+      "flaky": false,
+      "failureReasons": [],
+      "wallMs": 36194,
+      "ttftMs": 22896,
+      "ttfswMs": 36194,
+      "promptTokens": 5195,
+      "evalTokens": 176,
+      "cachedPromptTokens": 3447,
+      "cacheReusePct": 66,
+      "rounds": 2,
+      "toolRounds": 1,
+      "toolCalls": [
+        {
+          "name": "find_files",
+          "status": "ok",
+          "ms": 163
+        }
+      ],
+      "citationsBacked": 0,
+      "citationsUnbacked": 0,
+      "replyChars": 516
+    },
+    {
+      "id": "playing",
+      "category": "one-tool",
+      "prompt": "What's playing on Spotify right now?",
+      "runs": 3,
+      "passes": 3,
+      "passRate": 100,
+      "success": true,
+      "flaky": false,
+      "failureReasons": [],
+      "wallMs": 15683,
+      "ttftMs": 12883,
+      "ttfswMs": 15683,
+      "promptTokens": 1726,
+      "evalTokens": 31,
+      "cachedPromptTokens": 763,
+      "cacheReusePct": 44,
+      "rounds": 1,
+      "toolRounds": 1,
+      "toolCalls": [
+        {
+          "name": "now_playing",
+          "status": "ok",
+          "ms": 652
+        }
+      ],
+      "citationsBacked": 0,
+      "citationsUnbacked": 0,
+      "replyChars": 104
+    },
+    {
+      "id": "battery-clipboard",
+      "category": "multi-tool",
+      "prompt": "What's my battery percentage and what's on my clipboard?",
+      "runs": 3,
+      "passes": 3,
+      "passRate": 100,
+      "success": true,
+      "flaky": false,
+      "failureReasons": [],
+      "wallMs": 11503,
+      "ttftMs": 7996,
+      "ttfswMs": 11503,
+      "promptTokens": 1532,
+      "evalTokens": 47,
+      "cachedPromptTokens": 763,
+      "cacheReusePct": 50,
+      "rounds": 1,
+      "toolRounds": 1,
+      "toolCalls": [
+        {
+          "name": "battery_status",
+          "status": "ok",
+          "ms": 11
+        },
+        {
+          "name": "clipboard_read",
+          "status": "ok",
+          "ms": 4
+        }
+      ],
+      "citationsBacked": 0,
+      "citationsUnbacked": 0,
+      "replyChars": 274
+    },
+    {
+      "id": "volume-clipboard",
+      "category": "multi-tool",
+      "prompt": "What's the output volume and what's on my clipboard?",
+      "runs": 3,
+      "passes": 3,
+      "passRate": 100,
+      "success": true,
+      "flaky": false,
+      "failureReasons": [],
+      "wallMs": 13755,
+      "ttftMs": 10344,
+      "ttfswMs": 13755,
+      "promptTokens": 1787,
+      "evalTokens": 46,
+      "cachedPromptTokens": 763,
+      "cacheReusePct": 43,
+      "rounds": 1,
+      "toolRounds": 1,
+      "toolCalls": [
+        {
+          "name": "get_volume",
+          "status": "ok",
+          "ms": 306
+        },
+        {
+          "name": "clipboard_read",
+          "status": "ok",
+          "ms": 0
+        }
+      ],
+      "citationsBacked": 0,
+      "citationsUnbacked": 0,
+      "replyChars": 272
+    },
+    {
+      "id": "battery-files",
+      "category": "multi-tool",
+      "prompt": "Check my battery, then find files named 'screenshot'.",
+      "runs": 3,
+      "passes": 3,
+      "passRate": 100,
+      "success": true,
+      "flaky": false,
+      "failureReasons": [],
+      "wallMs": 38946,
+      "ttftMs": 21562,
+      "ttfswMs": 38946,
+      "promptTokens": 4777,
+      "evalTokens": 249,
+      "cachedPromptTokens": 3391,
+      "cacheReusePct": 71,
+      "rounds": 2,
+      "toolRounds": 1,
+      "toolCalls": [
+        {
+          "name": "battery_status",
+          "status": "ok",
+          "ms": 22
+        },
+        {
+          "name": "find_files",
+          "status": "ok",
+          "ms": 124
+        }
+      ],
+      "citationsBacked": 0,
+      "citationsUnbacked": 0,
+      "replyChars": 711
+    },
+    {
+      "id": "apps-clipboard",
+      "category": "multi-tool",
+      "prompt": "List a few installed apps and tell me what is on my clipboard.",
+      "runs": 3,
+      "passes": 3,
+      "passRate": 100,
+      "success": true,
+      "flaky": false,
+      "failureReasons": [],
+      "wallMs": 17156,
+      "ttftMs": 13081,
+      "ttfswMs": 17156,
+      "promptTokens": 1980,
+      "evalTokens": 50,
+      "cachedPromptTokens": 764,
+      "cacheReusePct": 39,
+      "rounds": 1,
+      "toolRounds": 1,
+      "toolCalls": [
+        {
+          "name": "list_apps",
+          "status": "ok",
+          "ms": 4
+        },
+        {
+          "name": "clipboard_read",
+          "status": "ok",
+          "ms": 4
+        }
+      ],
+      "citationsBacked": 0,
+      "citationsUnbacked": 0,
+      "replyChars": 253
+    },
+    {
+      "id": "example-page",
+      "category": "multi-tool",
+      "prompt": "Open example.com in the browser, read the heading, and tell me the page title.",
+      "runs": 3,
+      "passes": 3,
+      "passRate": 100,
+      "success": true,
+      "flaky": false,
+      "failureReasons": [],
+      "wallMs": 23662,
+      "ttftMs": 17862,
+      "ttfswMs": 23662,
+      "promptTokens": 10795,
+      "evalTokens": 63,
+      "cachedPromptTokens": 9254,
+      "cacheReusePct": 86,
+      "rounds": 3,
+      "toolRounds": 1,
+      "toolCalls": [
+        {
+          "name": "web_read",
+          "status": "ok",
+          "ms": 307
+        }
+      ],
+      "citationsBacked": 1,
+      "citationsUnbacked": 0,
+      "replyChars": 61
+    },
+    {
+      "id": "research-runtimes",
+      "category": "research",
+      "prompt": "Research the current state of local LLM runtimes for a 16 GB Mac. Give at least two sources, each with its exact URL.",
+      "runs": 3,
+      "passes": 3,
+      "passRate": 100,
+      "success": true,
+      "flaky": false,
+      "failureReasons": [],
+      "wallMs": 347437,
+      "ttftMs": 89969,
+      "ttfswMs": 347437,
+      "promptTokens": 47897,
+      "evalTokens": 1169,
+      "cachedPromptTokens": 27802,
+      "cacheReusePct": 58,
+      "rounds": 7,
+      "toolRounds": 5,
+      "toolCalls": [
+        {
+          "name": "research",
+          "status": "ok",
+          "ms": 1540
+        },
+        {
+          "name": "web_read",
+          "status": "ok",
+          "ms": 1
+        },
+        {
+          "name": "web_read",
+          "status": "ok",
+          "ms": 1
+        },
+        {
+          "name": "web_search",
+          "status": "ok",
+          "ms": 513
+        },
+        {
+          "name": "web_read",
+          "status": "ok",
+          "ms": 303
+        },
+        {
+          "name": "web_read",
+          "status": "ok",
+          "ms": 337
+        },
+        {
+          "name": "web_read",
+          "status": "ok",
+          "ms": 867
+        }
+      ],
+      "citationsBacked": 3,
+      "citationsUnbacked": 0,
+      "replyChars": 1674
+    },
+    {
+      "id": "compare-runners",
+      "category": "research",
+      "prompt": "Compare two local model runners and recommend one for a 16 GB Mac. Give at least two sources with their URLs.",
+      "runs": 3,
+      "passes": 3,
+      "passRate": 100,
+      "success": true,
+      "flaky": false,
+      "failureReasons": [],
+      "wallMs": 264209,
+      "ttftMs": 90110,
+      "ttfswMs": 264209,
+      "promptTokens": 38218,
+      "evalTokens": 973,
+      "cachedPromptTokens": 20881,
+      "cacheReusePct": 61,
+      "rounds": 6,
+      "toolRounds": 4,
+      "toolCalls": [
+        {
+          "name": "research",
+          "status": "ok",
+          "ms": 1450
+        },
+        {
+          "name": "web_read",
+          "status": "ok",
+          "ms": 1
+        },
+        {
+          "name": "web_read",
+          "status": "ok",
+          "ms": 1
+        },
+        {
+          "name": "web_search",
+          "status": "ok",
+          "ms": 453
+        },
+        {
+          "name": "web_read",
+          "status": "ok",
+          "ms": 212
+        }
+      ],
+      "citationsBacked": 2,
+      "citationsUnbacked": 0,
+      "replyChars": 1400
+    },
+    {
+      "id": "ollama-release",
+      "category": "research",
+      "prompt": "What changed in the latest Ollama release? Use current sources and include the URL you relied on.",
+      "runs": 3,
+      "passes": 3,
+      "passRate": 100,
+      "success": true,
+      "flaky": false,
+      "failureReasons": [],
+      "wallMs": 80875,
+      "ttftMs": 21954,
+      "ttfswMs": 80875,
+      "promptTokens": 17786,
+      "evalTokens": 260,
+      "cachedPromptTokens": 12702,
+      "cacheReusePct": 71,
+      "rounds": 4,
+      "toolRounds": 3,
+      "toolCalls": [
+        {
+          "name": "research",
+          "status": "ok",
+          "ms": 1251
+        },
+        {
+          "name": "web_search",
+          "status": "ok",
+          "ms": 395
+        },
+        {
+          "name": "web_read",
+          "status": "ok",
+          "ms": 288
+        }
+      ],
+      "citationsBacked": 1,
+      "citationsUnbacked": 0,
+      "replyChars": 393
+    },
+    {
+      "id": "handle-music",
+      "category": "ambiguous",
+      "prompt": "Handle my music.",
+      "runs": 3,
+      "passes": 3,
+      "passRate": 100,
+      "success": true,
+      "flaky": false,
+      "failureReasons": [],
+      "wallMs": 32335,
+      "ttftMs": 26088,
+      "ttfswMs": 32335,
+      "promptTokens": 5871,
+      "evalTokens": 124,
+      "cachedPromptTokens": 4350,
+      "cacheReusePct": 74,
+      "rounds": 2,
+      "toolRounds": 1,
+      "toolCalls": [
+        {
+          "name": "music_taste",
+          "status": "ok",
+          "ms": 2719
+        }
+      ],
+      "citationsBacked": 0,
+      "citationsUnbacked": 0,
+      "replyChars": 248
+    },
+    {
+      "id": "yesterday-thing",
+      "category": "ambiguous",
+      "prompt": "Deal with that thing from yesterday.",
+      "runs": 3,
+      "passes": 3,
+      "passRate": 100,
+      "success": true,
+      "flaky": false,
+      "failureReasons": [],
+      "wallMs": 13315,
+      "ttftMs": 11206,
+      "ttfswMs": 12081,
+      "promptTokens": 3635,
+      "evalTokens": 31,
+      "cachedPromptTokens": 2611,
+      "cacheReusePct": 72,
+      "rounds": 1,
+      "toolRounds": 0,
+      "toolCalls": [],
+      "citationsBacked": 0,
+      "citationsUnbacked": 0,
+      "replyChars": 147
+    }
+  ],
+  "idleRssMb": 252
+}

@@ -188,6 +188,38 @@ The report is `v0.1.0-phase2-focused.json`; raw replies and tool URLs remain in
 the gitignored local raw output. The idle sample is the 60 s process-tree
 measurement in `idle-rss.json`.
 
+## 24K-context baseline
+
+Measured 2026-11-21 from clean commit `df2a575` (`v0.1-overhaul`), three runs, full 20-task set,
+`qwen3.5:latest` digest `6488c96fa5fa`, greedy sampling, at the current defaults: 24,576-token
+context and 4,096 max output tokens. This report supersedes the 8K V.0.1 baseline for current
+performance claims; the older report stays as history.
+
+| Result | Value |
+| --- | --- |
+| Tasks passing every run | 20 / 20 |
+| Turn runs passing | 60 / 60 |
+| Median wall | 16,520 ms |
+| Median TTFT | 13,015 ms |
+| Trivial median | 13,069 ms |
+| One-tool median | 15,884 ms |
+| Multi-tool median | 38,946 ms |
+| Research median | 264,209 ms |
+| Cache reuse | 62% |
+| Median rounds | 1 |
+| Cold start | 5,603 ms |
+| Idle RSS | 252 MB |
+
+Nothing was flaky: `ollama-release` passed all three runs with a backed citation, against 2/3 in the
+8K baseline. Shallow turns improved (median wall −20%, TTFT −20%, one-tool −21%); multi-tool is +19%
+and research +69% slower because research now opens and cites the pages it retrieves (6–7 rounds,
+all citations backed) instead of finishing after an empty search. The larger window costs some cache
+reuse (65% → 62%).
+
+The idle RSS figure is a separate 60-second process-tree sample (`idle-rss.json`) taken after the
+run and attached to the report with its own timestamp; Ollama is not counted. The report's meta
+records the exact sample time.
+
 ## Caveats
 
 - Single-machine measurements on an M4 MacBook Air, 16 GB. Not a controlled lab.
@@ -204,6 +236,7 @@ measurement in `idle-rss.json`.
 - `v0.0-baseline.json` — historical V.0 run, unverified provenance, kept as-is
 - `v0.0.1-baseline.json` — verified V.0.1 baseline, clean commit, repeated runs
 - `v0.1.0-phase2-focused.json` — Phase 2 focused iteration report, unverified tree
+- `v0.1-24k-baseline.json` — verified 24K-context baseline on the full task set, supersedes the 8K one
 - `idle-rss.json` — the latest idle RSS sample with its commit and timestamp
 - `latest.json` — the most recent single run, ignored by git
 - `raw/*.raw.json` — full replies, cited URLs and tool summaries, kept local and

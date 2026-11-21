@@ -57,6 +57,34 @@ failure.
 The earlier V.0 report (`v0.0-baseline.json`) is marked `verified: false` and is retained only as
 history; it is not a comparison baseline.
 
+## 24K-context baseline
+
+`docs/benchmarks/v0.1-24k-baseline.json` — commit `df2a575`, three runs, verified, the full 20-task
+set at the current defaults: 24,576-token context and 4,096 max output tokens.
+
+| Metric | Result |
+| --- | --- |
+| Tasks passing every run | 20 / 20 |
+| Turn runs passing | 60 / 60 |
+| Median wall time | 16,520 ms |
+| Median time to first token | 13,015 ms |
+| Trivial median | 13,069 ms |
+| One-tool median | 15,884 ms |
+| Multi-tool median | 38,946 ms |
+| Research median | 264,209 ms |
+| KV-cache reuse | 62% |
+| Median model rounds | 1 |
+| Cold start to engine ready | 5,603 ms |
+| Idle RSS | 252 MB |
+
+No task was flaky. `ollama-release`, which failed one of three runs in the 8K baseline, passed all
+three with a backed citation.
+
+Against the 8K baseline: median wall −20%, TTFT −20%, one-tool −21%, trivial −5%; multi-tool +19%
+and research +69%. The slower categories are not a stall. Research turns now retrieve and open real
+pages — 6–7 rounds, every citation backed — where the 8K run often finished after a failed search.
+The larger window also costs cache reuse (65% → 62%) and prefill time on long turns.
+
 ## Focused Phase 2 iteration
 
 `docs/benchmarks/v0.1.0-phase2-focused.json` — eight tasks, three runs, commit `5874f7b`, dirty tree,
@@ -74,8 +102,9 @@ history; it is not a comparison baseline.
 All eight tasks passed all three runs. The idle RSS figure is a 60-second process-tree sample with
 Ollama excluded.
 
-**Scope warning:** the full 20-task suite has not been rerun since these changes. Treat the focused
-numbers as evidence that the optimisations work on those tasks, not as a new verified baseline.
+**Scope note:** these focused numbers predate the 24K-context baseline above. The full 20-task suite
+has since been rerun on the current defaults; use that verified baseline for current claims, not this
+subset.
 
 ## What changed
 
@@ -124,10 +153,12 @@ background.
 - **Two-model tiering** (a 4B router plus the 6.6 GB model) was not adopted. Keeping a second model
   resident competes for unified memory on 16 GB, and no measurement showed it winning. The fast path
   is deterministic planning and prefetch instead.
-- **The full suite is not rerun.** The verified baseline predates Phase 2.
-- **Research is still slow.** A multi-source dossier can take two to three minutes on this machine.
-  That is the cost of local inference over several pages, and the HUD shows elapsed time rather than
-  pretending otherwise.
+- **The full suite is now rerun.** The 24K-context baseline supersedes the 8K one. Two categories
+  are slower than the 8K run (multi-tool +19%, research +69%) because research now reads the pages it
+  retrieves instead of ending on an empty search.
+- **Research is still slow.** The 24K baseline puts the research median at 264 s, and the heaviest
+  task took 347 s. That is the cost of local inference over several opened pages, and the HUD shows
+  elapsed time rather than pretending otherwise.
 - **Cold start is unchanged** at roughly five seconds to a warm model. A 6.6 GB model has to load.
 
 ## Reading a slow turn
