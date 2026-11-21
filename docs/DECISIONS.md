@@ -139,10 +139,10 @@ to a hosted model.
 
 ## ADR-013 — Calm native utility UI, not an instrument panel
 
-**Decision.** Replace Sentinel with a neutral, system-typed desktop utility: light and dark themes
-following macOS, a solid conversation sidebar, plain reply text, one blue accent for primary actions
-and focus, a quiet expandable tool trace, and a compact 400×132 HUD. No reactor, glow, gradients,
-scan lines or decorative animation.
+**Decision.** Replace Sentinel with a calm, system-typed desktop utility: light and dark themes
+following macOS, a solid conversation sidebar, plain reply text, one crimson accent from the
+project's wine and rose ramp for primary actions and focus, a quiet expandable tool trace, and a
+compact 400×132 HUD. No reactor, glow, gradients, scan lines or decorative animation.
 
 **Why.** The agent's work is text and tool steps. Sentinel made the chrome louder than the answer and
 read as generated decoration. A native utility is easier to read for long sessions, respects system

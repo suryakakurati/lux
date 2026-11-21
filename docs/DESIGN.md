@@ -8,8 +8,8 @@ telemetry — was replaced in 0.1.0 because it read as decoration around the wor
 ## Principles
 
 1. **The text is the interface.** Reply text has the highest contrast; chrome is secondary.
-2. **One accent.** Blue marks primary actions, links and focus. Status colours (`success`, `warning`,
-   `danger`) are only used to report a state.
+2. **One accent.** The crimson step marks primary actions, links and focus. Status colours
+   (`success`, `warning`, `danger`) are only used to report a state.
 3. **System type.** SF Pro through `-apple-system`. Mono is reserved for code, tool arguments,
    timings and model identifiers.
 4. **Flat, not glowing.** Depth comes from a 1 px hairline and a small shadow. No gradients, glows,
@@ -20,26 +20,31 @@ telemetry — was replaced in 0.1.0 because it read as decoration around the wor
 
 ## Tokens
 
-Defined once in `src/styles/tokens.css`. Both themes follow the system appearance.
+Defined once in `src/styles/tokens.css`. Both themes follow the system appearance. The palette is
+the project's six-step wine and rose ramp — `#501423`, `#751C2F`, `#B72F4A`, `#EA5C6F`, `#EF96A3`,
+`#F4B4C1` — from `colorscheme.png`. The two darkest steps tint the surfaces, the crimson step is the
+accent, and the blush steps carry soft fills. The app icon already used the same wine, crimson and
+blush values.
 
 | Token | Light | Dark | Use |
 | --- | --- | --- | --- |
-| `--bg` | `#f6f6f7` | `#1c1c1e` | window base |
-| `--surface` | `#ffffff` | `#262628` | reading surface, controls |
-| `--surface-2` | `#f1f1f3` | `#2c2c2e` | user bubble, tool trace, hovers |
-| `--surface-3` | `#e8e8ea` | `#363638` | pressed / disabled fills |
-| `--sidebar` | `#ececee` | `#1a1a1c` | conversation sidebar |
-| `--sidebar-active` | `#dededf` | `#2e2e30` | selected conversation |
-| `--line` | `rgba(0,0,0,.09)` | `rgba(255,255,255,.09)` | hairlines |
-| `--line-strong` | `rgba(0,0,0,.16)` | `rgba(255,255,255,.18)` | input borders |
-| `--ink` | `#1d1d1f` | `#f2f2f4` | primary text |
-| `--ink-2` | `#454548` | `#c9c9ce` | secondary text |
-| `--ink-3` | `#6e6e73` | `#9a9aa0` | supporting text |
-| `--ink-4` | `#8a8a8f` | `#85858b` | timestamps, hints |
-| `--accent` | `#0b6bd6` | `#2b74d9` | primary action, links, focus |
-| `--success` | `#1a7f37` | `#35c759` | engine ready, tool succeeded |
-| `--warning` | `#9a5b00` | `#f0a02a` | engine starting, model missing |
-| `--danger` | `#c62828` | `#ff6961` | offline, failed or denied tool |
+| `--bg` | `#fbf4f6` | `#3a0e19` | window base |
+| `--surface` | `#ffffff` | `#501423` | reading surface, controls |
+| `--field` | `#ffffff` | `#5f1829` | inputs and composer |
+| `--surface-2` | `#f7e9ed` | `#5f1829` | user bubble, tool trace, hovers |
+| `--surface-3` | `#efdae0` | `#751c2f` | pressed / disabled fills |
+| `--sidebar` | `#f6e9ec` | `#430f1d` | conversation sidebar |
+| `--sidebar-active` | `#ebd3da` | `#6a1a2c` | selected conversation |
+| `--line` | `rgba(80,20,35,.10)` | `rgba(244,180,193,.13)` | hairlines |
+| `--line-strong` | `rgba(80,20,35,.19)` | `rgba(244,180,193,.24)` | input borders |
+| `--ink` | `#2a0810` | `#fdf1f4` | primary text |
+| `--ink-2` | `#57222f` | `#f0cdd5` | secondary text |
+| `--ink-3` | `#7b4351` | `#d9a9b5` | supporting text |
+| `--ink-4` | `#96606d` | `#c08d9a` | timestamps, hints |
+| `--accent` | `#b72f4a` | `#f06d80` | primary action, links, focus |
+| `--success` | `#1a7f37` | `#6fcf97` | engine ready, tool succeeded |
+| `--warning` | `#8a5a00` | `#f2c078` | engine starting, model missing |
+| `--danger` | `#b3261e` | `#ff8a8a` | offline, failed or denied tool |
 
 Spacing is a 4 px grid: `4, 8, 12, 16, 20, 24, 32, 40`. Radii: `4` (chips), `6` (buttons), `8`
 (cards, composer controls), `12` (composer, settings), `16` (sheets, onboarding).
@@ -135,9 +140,9 @@ Captured from the real app with the debug hooks described in the README:
 
 ## Deliberate trade-offs
 
-- **No native vibrancy.** Solid neutral surfaces keep text contrast predictable over any desktop and
-  make the light and dark themes behave the same. Translucency is limited to the floating HUD, where
-  it serves hierarchy.
+- **No native vibrancy.** Solid wine-tinted surfaces keep text contrast predictable over any desktop
+  and make the light and dark themes behave the same. Translucency is limited to the floating HUD,
+  where it serves hierarchy.
 - **System theme only.** There is no in-app appearance switch; the app follows macOS. A manual switch
   would be a second setting with no product need.
 - **No instrument telemetry.** CPU, memory and battery are one quiet line in the sidebar, not gauges.

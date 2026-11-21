@@ -55,8 +55,8 @@ developer-grade (no installer, ad-hoc signing).
   answer without a URL that actually appeared in tool output is not accepted as sourced.
 - **Evals.** Thirty deterministic multi-step cases (`npm run evals`) plus the real-model benchmark.
 - **A new interface.** The Sentinel console has been replaced with a calm desktop utility: system
-  type, neutral surfaces, one blue accent, plain-text replies and a quiet tool trace. Light and dark
-  follow the system.
+  type, wine and rose surfaces taken from the project's own color scheme, one crimson accent,
+  plain-text replies and a quiet tool trace. Light and dark follow the system.
 
 ## Requirements
 

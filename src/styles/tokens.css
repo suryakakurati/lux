@@ -1,7 +1,10 @@
 /* Lux design tokens.
-   A calm macOS utility: neutral surfaces, system typography, one restrained
-   blue accent for primary actions and focus. Status colours are only used to
-   report status. There are no gradients, glows or decorative animation. */
+   The palette comes from the project's own color scheme: a six-step wine and
+   rose ramp. Surfaces are tinted with the two darkest steps, the accent is the
+   crimson step, and blush steps carry soft fills. Status colours stay semantic
+   so a warning and a primary action are never confused.
+
+   Ramp: #501423  #751C2F  #B72F4A  #EA5C6F  #EF96A3  #F4B4C1 */
 
 :root {
   /* 4 px spacing grid */
@@ -41,79 +44,82 @@
   --sidebar-width: 244px;
   --content-width: 700px;
 
-  /* light theme */
   color-scheme: light dark;
 
-  --bg: #f6f6f7;
+  /* light theme — pale blush paper, wine ink */
+  --bg: #fbf4f6;
   --surface: #ffffff;
-  --surface-2: #f1f1f3;
-  --surface-3: #e8e8ea;
-  --sidebar: #ececee;
-  --sidebar-active: #dededf;
+  --field: #ffffff;
+  --surface-2: #f7e9ed;
+  --surface-3: #efdae0;
+  --sidebar: #f6e9ec;
+  --sidebar-active: #ebd3da;
 
-  --line: rgba(0, 0, 0, 0.09);
-  --line-strong: rgba(0, 0, 0, 0.16);
+  --line: rgba(80, 20, 35, 0.1);
+  --line-strong: rgba(80, 20, 35, 0.19);
 
-  --ink: #1d1d1f;
-  --ink-2: #454548;
-  --ink-3: #6e6e73;
-  --ink-4: #8a8a8f;
+  --ink: #2a0810;
+  --ink-2: #57222f;
+  --ink-3: #7b4351;
+  --ink-4: #96606d;
 
-  --accent: #0b6bd6;
-  --accent-hover: #0a5bb8;
-  --accent-soft: rgba(11, 107, 214, 0.1);
+  --accent: #b72f4a;
+  --accent-hover: #99263c;
+  --accent-soft: rgba(183, 47, 74, 0.09);
   --on-accent: #ffffff;
 
   --success: #1a7f37;
-  --warning: #9a5b00;
-  --warning-soft: rgba(154, 91, 0, 0.1);
-  --danger: #c62828;
-  --danger-soft: rgba(198, 40, 40, 0.08);
+  --warning: #8a5a00;
+  --warning-soft: rgba(138, 90, 0, 0.09);
+  --danger: #b3261e;
+  --danger-soft: rgba(179, 38, 30, 0.08);
 
-  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.06);
-  --shadow-2: 0 8px 24px -10px rgba(0, 0, 0, 0.18);
-  --shadow-3: -12px 0 40px -18px rgba(0, 0, 0, 0.28);
+  --shadow-1: 0 1px 2px rgba(42, 8, 16, 0.07);
+  --shadow-2: 0 8px 24px -10px rgba(42, 8, 16, 0.22);
+  --shadow-3: -12px 0 40px -18px rgba(42, 8, 16, 0.32);
 
-  --selection: rgba(11, 107, 214, 0.18);
-  --scrollbar: rgba(0, 0, 0, 0.16);
-  --scrollbar-hover: rgba(0, 0, 0, 0.28);
+  --selection: rgba(183, 47, 74, 0.18);
+  --scrollbar: rgba(80, 20, 35, 0.18);
+  --scrollbar-hover: rgba(80, 20, 35, 0.3);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #1c1c1e;
-    --surface: #262628;
-    --surface-2: #2c2c2e;
-    --surface-3: #363638;
-    --sidebar: #1a1a1c;
-    --sidebar-active: #2e2e30;
+    /* deep wine surfaces with blush text */
+    --bg: #3a0e19;
+    --surface: #501423;
+    --field: #5f1829;
+    --surface-2: #5f1829;
+    --surface-3: #751c2f;
+    --sidebar: #430f1d;
+    --sidebar-active: #6a1a2c;
 
-    --line: rgba(255, 255, 255, 0.09);
-    --line-strong: rgba(255, 255, 255, 0.18);
+    --line: rgba(244, 180, 193, 0.13);
+    --line-strong: rgba(244, 180, 193, 0.24);
 
-    --ink: #f2f2f4;
-    --ink-2: #c9c9ce;
-    --ink-3: #9a9aa0;
-    --ink-4: #85858b;
+    --ink: #fdf1f4;
+    --ink-2: #f0cdd5;
+    --ink-3: #d9a9b5;
+    --ink-4: #c08d9a;
 
-    --accent: #2b74d9;
-    --accent-hover: #3d86ec;
-    --accent-soft: rgba(88, 153, 255, 0.14);
-    --on-accent: #ffffff;
+    --accent: #f06d80;
+    --accent-hover: #f4899a;
+    --accent-soft: rgba(240, 109, 128, 0.16);
+    --on-accent: #2a0810;
 
-    --success: #35c759;
-    --warning: #f0a02a;
-    --warning-soft: rgba(240, 160, 42, 0.12);
-    --danger: #ff6961;
-    --danger-soft: rgba(255, 105, 97, 0.12);
+    --success: #6fcf97;
+    --warning: #f2c078;
+    --warning-soft: rgba(242, 192, 120, 0.12);
+    --danger: #ff8a8a;
+    --danger-soft: rgba(255, 138, 138, 0.12);
 
-    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.3);
-    --shadow-2: 0 10px 28px -12px rgba(0, 0, 0, 0.55);
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.28);
+    --shadow-2: 0 10px 28px -12px rgba(0, 0, 0, 0.5);
     --shadow-3: -12px 0 40px -18px rgba(0, 0, 0, 0.6);
 
-    --selection: rgba(88, 153, 255, 0.24);
-    --scrollbar: rgba(255, 255, 255, 0.16);
-    --scrollbar-hover: rgba(255, 255, 255, 0.28);
+    --selection: rgba(240, 109, 128, 0.26);
+    --scrollbar: rgba(244, 180, 193, 0.2);
+    --scrollbar-hover: rgba(244, 180, 193, 0.34);
   }
 }
 

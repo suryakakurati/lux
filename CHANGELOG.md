@@ -21,8 +21,9 @@ measured performance pass and a designed interface.
 - 30 deterministic eval cases (`npm run evals`).
 - Reproducible 20-turn benchmark with greedy decoding, three runs, strict per-task success, clean-tree
   provenance and separate research budgets.
-- Calm native interface: light and dark themes, system typography, neutral surfaces, one blue accent,
-  plain-text replies, a quiet expandable tool trace, a redesigned settings panel and a minimal HUD.
+- Calm native interface: light and dark themes, system typography, wine and rose surfaces from the
+  project's color scheme, one crimson accent, plain-text replies, a quiet expandable tool trace, a
+  redesigned settings panel and a minimal HUD.
 - Explicit empty, checking, offline, missing-model, missing-permission, error, streaming and approval
   states.
 - Documentation set: architecture, agent, performance, design, security, troubleshooting, contributing,

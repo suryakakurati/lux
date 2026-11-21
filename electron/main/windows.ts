@@ -5,7 +5,7 @@ const preloadPath = join(__dirname, '../preload/index.js')
 
 /** Matches the renderer window colour so a launch never flashes the wrong theme. */
 function windowBackground(): string {
-  return nativeTheme.shouldUseDarkColors ? '#1c1c1e' : '#f6f6f7'
+  return nativeTheme.shouldUseDarkColors ? '#3a0e19' : '#fbf4f6'
 }
 
 export const HUD_WIDTH = 400
