@@ -3,16 +3,15 @@ import { existsSync, unlinkSync } from 'node:fs'
 import { homedir, tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { Settings, VoiceOption } from '../../shared/types'
-import { chooseVoice, speechText } from '../../shared/speech'
+import { chooseVoice, isNaturalVoice, speechText } from '../../shared/speech'
 import { exec } from './mac/exec'
 import { logLine } from './log'
 
 let current: ChildProcess | null = null
 let currentClip: string | null = null
 let cachedVoice: string | null = null
-let cachedVoiceInfo: VoiceOption | null = null
 let cachedVoices: VoiceOption[] | null = null
-/** `say` can exit 0 for a voice that is not installed, so presence is checked. */
+/** `say` exits 0 for a voice that is not installed, so presence is checked. */
 let installedVoices: Set<string> | null = null
 
 /**
@@ -39,9 +38,9 @@ export function neuralEngine(): { bin: string; model: string } | null {
  * Speech output. Local, zero-dependency by default, and instantly
  * interruptible — starting a new utterance stops the previous one.
  *
- * Order: the selected macOS voice, or the neural voice for "Automatic" when it
- * is installed. A selected voice that has since been deleted falls back to the
- * automatic choice rather than failing silently.
+ * Order: the selected macOS voice; for "Automatic" the best installed macOS
+ * voice, or the neural engine when only compact macOS voices exist. A selected
+ * voice that has since been deleted falls back to the automatic choice.
  */
 export function speak(text: string, settings: Settings, onActive?: (active: boolean) => void): void {
   const spoken = speechText(text)
@@ -49,29 +48,32 @@ export function speak(text: string, settings: Settings, onActive?: (active: bool
   stopSpeaking()
 
   const rate = settings.speechRate || 175
-  const requested = settings.voice.trim()
-  const missing = requested !== '' && installedVoices !== null && !installedVoices.has(requested)
-  if (missing) {
+  const engine = neuralEngine()
+  const voice = selectVoice(settings.voice.trim(), engine !== null)
+
+  if (voice === 'neural') {
+    if (engine && startNeural(spoken, engine, rate, onActive)) return
+    // The engine vanished between detection and spawn.
+    startSay(spoken, cachedVoice, rate, onActive)
+    return
+  }
+  startSay(spoken, voice, rate, onActive)
+}
+
+/**
+ * `say` accepts an unknown voice, exits 0 and stays silent, so an exit-code
+ * check would never fire. The saved choice is checked against the installed
+ * list instead, exactly once, before anything is spoken.
+ */
+function selectVoice(requested: string, neural: boolean): string | 'neural' | null {
+  if (requested) {
+    if (installedVoices === null || installedVoices.has(requested)) return requested
     logLine('voice', `"${requested}" is not installed; using the automatic voice`)
   }
-  const wanted = missing ? '' : requested
-  // A downloaded Premium or Enhanced macOS voice is the best native option; the
-  // neural engine is for the compact voices that ship by default.
-  const naturalVoice = cachedVoiceInfo !== null && cachedVoiceInfo.quality !== 'standard'
-  const engine = neuralEngine()
-  if (!wanted && !naturalVoice && engine && startNeural(spoken, engine, rate, onActive)) return
-
-  const automatic = cachedVoice
-  startSay(spoken, wanted || automatic, rate, onActive, () => {
-    const fallback = automatic && automatic !== wanted ? automatic : null
-    logLine(
-      'voice',
-      `"${wanted}" is not installed; falling back to ${fallback ?? 'the macOS default voice'}`
-    )
-    startSay(spoken, fallback, rate, onActive, () =>
-      startSay(spoken, null, rate, onActive)
-    )
-  })
+  // Premium and Enhanced are Apple's best native voices; the neural engine is
+  // for the compact voices that ship with macOS.
+  if (cachedVoice && isNaturalVoice(cachedVoice)) return cachedVoice
+  return neural ? 'neural' : cachedVoice
 }
 
 export function stopSpeaking(): void {
@@ -90,8 +92,7 @@ function startSay(
   spoken: string,
   voice: string | null,
   rate: number,
-  onActive: ((active: boolean) => void) | undefined,
-  onMissingVoice?: () => void
+  onActive: ((active: boolean) => void) | undefined
 ): void {
   const args = ['-r', String(rate)]
   if (voice) args.push('-v', voice)
@@ -107,16 +108,12 @@ function startSay(
   }
   current = child
   onActive?.(true)
-  child.on('error', () => {
+  const finish = (): void => {
     if (current === child) current = null
     onActive?.(false)
-  })
-  child.on('exit', (code) => {
-    if (current === child) current = null
-    onActive?.(false)
-    // `say` exits 1 when the named voice is not installed.
-    if (code !== 0 && voice) onMissingVoice?.()
-  })
+  }
+  child.on('error', finish)
+  child.on('exit', finish)
 }
 
 /** A short sentence should not take longer than the spoken voice's own pace. */
@@ -179,16 +176,13 @@ function playClip(clip: string, onActive: ((active: boolean) => void) | undefine
     return
   }
   current = player
-  player.on('error', () => {
+  const finish = (): void => {
     if (current === player) current = null
     onActive?.(false)
     discardClip()
-  })
-  player.on('exit', () => {
-    if (current === player) current = null
-    onActive?.(false)
-    discardClip()
-  })
+  }
+  player.on('error', finish)
+  player.on('exit', finish)
 }
 
 function discardClip(): void {
@@ -236,8 +230,6 @@ export async function listVoices(refresh = false): Promise<VoiceOption[]> {
 /** Pick the most natural installed English voice, so Lux sounds deliberate. */
 export async function resolveVoice(refresh = false): Promise<string | null> {
   if (cachedVoice && !refresh) return cachedVoice
-  const voices = await listVoices(true)
-  cachedVoice = chooseVoice(voices)
-  cachedVoiceInfo = voices.find((voice) => voice.name === cachedVoice) ?? null
+  cachedVoice = chooseVoice(await listVoices(true))
   return cachedVoice
 }

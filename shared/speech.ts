@@ -13,36 +13,12 @@ export interface VoiceOption {
   quality: 'premium' | 'enhanced' | 'standard'
 }
 
-export function firstSpokenSentence(markdown: string): string | null {
-  const plain = markdown
-    .replace(/```[\s\S]*?```/g, ' (code omitted) ')
-    .replace(/`([^`]+)`/g, '$1')
-    .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
-    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
-    .replace(/^#{1,6}\s+/gm, '')
-    .replace(/(\*\*|__)(.*?)\1/g, '$2')
-    .replace(/(\*|_)(.*?)\1/g, '$2')
-    .replace(/\s+/g, ' ')
-    .trim()
-  if (!plain) return null
-
-  const sentences = plain.match(/[^.!?]+[.!?]+/g) ?? []
-  for (const raw of sentences) {
-    const sentence = raw.trim()
-    if (sentence.length < 8 || FILLER.test(sentence)) continue
-    if (sentence.endsWith(':')) continue
-    return sentence.length <= 240 ? sentence : `${sentence.slice(0, 240).replace(/\s+\S*$/, '')}…`
-  }
-  return null
-}
-
 /**
- * Unedited markdown read aloud is noise: `say` spells out URLs and asterisks,
- * and emoji vanish. Strip it, then pace the result. The cap keeps a long answer
- * from holding the microphone for a minute.
+ * Markdown read aloud is noise: `say` spells out URLs and asterisks, and emoji
+ * vanish. The preview sentence and the spoken text both start here.
  */
-export function speechText(markdown: string, limit = 480): string {
-  const plain = markdown
+export function plainText(markdown: string): string {
+  return markdown
     .replace(/```[\s\S]*?```/g, ' (code omitted) ')
     .replace(/`([^`]+)`/g, '$1')
     .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
@@ -58,6 +34,28 @@ export function speechText(markdown: string, limit = 480): string {
     .replace(/&/g, ' and ')
     .replace(/\s+/g, ' ')
     .trim()
+}
+
+export function firstSpokenSentence(markdown: string): string | null {
+  const plain = plainText(markdown)
+  if (!plain) return null
+
+  const sentences = plain.match(/[^.!?]+[.!?]+/g) ?? []
+  for (const raw of sentences) {
+    const sentence = raw.trim()
+    if (sentence.length < 8 || FILLER.test(sentence)) continue
+    if (sentence.endsWith(':')) continue
+    return sentence.length <= 240 ? sentence : `${sentence.slice(0, 240).replace(/\s+\S*$/, '')}…`
+  }
+  return null
+}
+
+/**
+ * Plain text for speech, paced and capped. The cap keeps a long answer from
+ * holding the microphone for a minute.
+ */
+export function speechText(markdown: string, limit = 480): string {
+  const plain = plainText(markdown)
   if (!plain) return ''
   const clipped =
     plain.length <= limit ? plain : `${plain.slice(0, limit).replace(/[,;:\s]+\S*$/, '')}…`
@@ -75,6 +73,11 @@ export function paceSentences(text: string): string {
 /** `Ava (Premium)` and `Ava` are the same voice at different quality tiers. */
 export function voiceBaseName(name: string): string {
   return name.replace(/\s+\((Premium|Enhanced)\)$/i, '').trim()
+}
+
+/** A downloaded Premium or Enhanced voice, as opposed to a compact one. */
+export function isNaturalVoice(name: string): boolean {
+  return /\((Premium|Enhanced)\)$/i.test(name)
 }
 
 /**
