@@ -42,7 +42,8 @@ export const DEFAULT_SETTINGS: Settings = {
   memoryMode: 'lexical',
   speechEnabled: true,
   voice: '',
-  speechRate: 185,
+  // 185 clipped the ends of sentences; 175 is the same voice, phrased.
+  speechRate: 175,
   sttModel: 'base.en',
   sttEngine: 'auto',
   openChatThreshold: 220,
@@ -89,6 +90,10 @@ export function getSettings(): Settings {
   // be that default than a considered choice. It leaves no room for history on
   // a tool-heavy turn, so a legacy value moves up to the current default once.
   if (stored.contextWindow === 8_192) merged.contextWindow = DEFAULT_SETTINGS.contextWindow
+  // 185 was the old fixed rate rather than a considered choice.
+  if (stored.speechRate === 185) merged.speechRate = DEFAULT_SETTINGS.speechRate
+  // 1,536 was the old fixed cap; it cut long answers off mid-explanation.
+  if (stored.maxOutputTokens === 1_536) merged.maxOutputTokens = DEFAULT_SETTINGS.maxOutputTokens
   if (!merged.notesDir) merged.notesDir = defaultNotesDir()
   // Use the vault Obsidian already has open unless the person set one explicitly.
   if (!merged.vaultPath) merged.vaultPath = detectObsidianVault()

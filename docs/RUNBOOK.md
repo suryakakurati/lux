@@ -62,11 +62,22 @@ Install one:
 
 ```bash
 npm run stt:setup          # whisper.cpp + ggml-base.en (fastest)
-# or make sure a whisper CLI is on PATH
-which whisper
+# or the Python CLI: pip install openai-whisper
 ```
 
+Lux finds `/opt/homebrew/bin`, `/usr/local/bin`, `/opt/local/bin` and `~/.local/bin` without help —
+an app opened from Finder does not inherit the shell's `PATH`. The Python CLI also needs `ffmpeg`,
+which Lux puts on the child process's PATH. `which whisper` failing in your terminal is a useful
+check, but it is not what the app relies on.
+
 The engine state is shown in the top-bar pill, the rail's engine row and Settings → Local engine.
+
+### Speech sounds robotic, or a selected voice says nothing
+
+`npm run voice:setup` installs Piper and a neural English voice under `~/.cache/lux`. "Automatic"
+prefers it. If a selected macOS voice has been deleted, `say` exits successfully but says nothing,
+so Lux checks the installed list first and uses the automatic voice instead; the fallback is logged
+in `logs/lux.log`.
 
 ### "Can't reach Ollama" / engine offline
 

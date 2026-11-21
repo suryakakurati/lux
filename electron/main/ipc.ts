@@ -11,6 +11,7 @@ import type { EngineSupervisor } from './agent/engine'
 import type { HotkeyBridge } from './hotkey'
 import type { Session } from './session'
 import type { Transcriber } from './stt'
+import { listVoices, resolveVoice } from './tts'
 import { getChatWindow, hideHud } from './windows'
 
 export interface IpcDeps {
@@ -101,6 +102,9 @@ export function registerIpc(deps: IpcDeps): void {
   ipcMain.handle('lux:settings:save', (_event, patch: Partial<Settings>) => {
     const next = saveSettings(patch)
     if (patch.sttModel || patch.sttEngine) transcriber.invalidate()
+    // A newly downloaded Premium voice should become the automatic choice, and
+    // clearing the override should fall back to it without a restart.
+    if (patch.voice !== undefined) void resolveVoice(true)
     deps.onSettingsChanged(next)
     deps.broadcast({ kind: 'settings', settings: next })
     return next
@@ -140,6 +144,16 @@ export function registerIpc(deps: IpcDeps): void {
 
   ipcMain.handle('lux:speak-test', (_event, text: string) => {
     deps.onSpeak(String(text ?? 'Lux is ready.'))
+  })
+
+  // Re-read the list each time Settings opens: a voice downloaded while Lux is
+  // running should appear without a restart.
+  ipcMain.handle('lux:voices', () => listVoices(true))
+
+  ipcMain.handle('lux:voice-settings', async () => {
+    await shell.openExternal(
+      'x-apple.systempreferences:com.apple.preference.universalaccess?SpokenContent'
+    )
   })
 
   // ------------------------------------------------------------------ HUD

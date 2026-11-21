@@ -63,7 +63,8 @@ developer-grade (no installer, ad-hoc signing).
 - macOS 13 or newer on Apple silicon.
 - [Ollama](https://ollama.com) with a tool-capable chat model. Developed against `qwen3.5:latest`.
 - Xcode Command Line Tools, for the native hotkey listener.
-- A speech engine: `whisper.cpp` (recommended) or a `whisper` CLI on `PATH`.
+- A speech engine: `whisper.cpp` (recommended) or the `whisper` CLI. Lux resolves Homebrew and
+  `~/.local/bin` itself, since a Finder-launched app does not inherit the shell's `PATH`.
 - Node 22 or newer for development.
 
 An embedding model (`nomic-embed-text`) is only needed if semantic memory is enabled. Lexical recall
@@ -152,7 +153,9 @@ Settings is a panel inside the chat window (⌘, or the gear). It covers:
 
 - **Local engine** — status and a restart action.
 - **Model** — agent model, context window, max output tokens, keep-alive, optional specialist model.
-- **Voice** — speech on/off and rate, with a test action.
+- **Voice** — speech on/off, the installed macOS voice (Premium and Enhanced preferred
+  automatically), rate, and a test action. `npm run voice:setup` installs an optional neural
+  (Piper) voice that "Automatic" uses; a selected voice that is later deleted falls back to it.
 - **Morning brief** — on/off, delivery time and quiet hours.
 - **Permissions** — status and shortcuts to the macOS panes.
 - **Knowledge and memory** — notes folder, optional Obsidian vault, optional read-only SQLite
@@ -197,7 +200,7 @@ turn can be reconstructed or resumed instead of restarted.
 
 ## What it can do
 
-The registry has 57 tools. They fall into these groups:
+The registry has 58 tools. They fall into these groups:
 
 - **Apps and machine** — open/quit apps, installed apps, focus presets, CPU/memory/disk/battery,
   volume, appearance, lock, display sleep.

@@ -9,7 +9,8 @@ import type {
   PermissionsStatus,
   Settings,
   SystemStats,
-  ToolRun
+  ToolRun,
+  VoiceOption
 } from '../../shared/types'
 import {
   IconCheck,
@@ -813,6 +814,7 @@ function SettingsPanel({
   onSaved: (settings: Settings) => void
 }) {
   const [models, setModels] = useState<string[]>([])
+  const [voices, setVoices] = useState<VoiceOption[]>([])
   const [local, setLocal] = useState<Settings>(settings)
   const engineState: EngineState = engine?.state ?? 'checking'
 
@@ -821,6 +823,10 @@ function SettingsPanel({
       void window.lux.listModels().then(setModels)
     }
   }, [engine])
+
+  useEffect(() => {
+    void window.lux.listVoices().then(setVoices)
+  }, [])
 
   const update = (patch: Partial<Settings>): void => {
     const next = { ...local, ...patch }
@@ -975,6 +981,32 @@ function SettingsPanel({
               onChange={(event) => update({ speechEnabled: event.target.checked })}
             />
           </label>
+          <label className="field">
+            <span>Voice</span>
+            <select
+              className="select"
+              value={local.voice}
+              onChange={(event) => update({ voice: event.target.value })}
+            >
+              <option value="">Automatic — most natural installed</option>
+              {local.voice && !voices.some((voice) => voice.name === local.voice) && (
+                <option value={local.voice}>{local.voice}</option>
+              )}
+              {voices.map((voice) => (
+                <option key={voice.name} value={voice.name}>
+                  {voice.name} · {voice.language}
+                  {voice.quality === 'standard' ? '' : ` · ${voice.quality}`}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button className="text-button" onClick={() => void window.lux.openVoiceSettings()}>
+            Download more natural voices
+          </button>
+          <p className="settings-note">
+            macOS ships compact voices. A Premium or Enhanced download in Accessibility → Spoken
+            Content sounds far more natural, and Lux picks it up here without a restart.
+          </p>
           <label className="slider-row">
             <span>Speech rate</span>
             <input

@@ -4,6 +4,10 @@
  * drift apart silently.
  */
 
+import type { VoiceOption } from './speech'
+
+export type { VoiceOption } from './speech'
+
 export type HudState =
   | 'idle'
   | 'listening'
@@ -179,6 +183,8 @@ export interface LuxBridge {
   recoverEngine(): Promise<EngineStatus>
   conversations(): Promise<ConversationSummary[]>
   speakTest(text: string): Promise<void>
+  listVoices(): Promise<VoiceOption[]>
+  openVoiceSettings(): Promise<void>
   finishSetup(): Promise<void>
   permissions(): Promise<PermissionsStatus>
   openPermissionPane(kind: 'microphone' | 'input' | 'automation' | 'screen'): Promise<void>
