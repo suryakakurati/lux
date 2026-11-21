@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "id": "compare-options",
+  "title": "Compare options",
+  "description": "Compare two or more options on the same criteria, then recommend one with sources.",
+  "keywords": ["compare", "comparison", "recommend", "versus", "tradeoff", "which is better", "options"],
+  "examples": ["Compare two local model runners and recommend one for a 16 GB Mac"],
+  "steps": [
+    {
+      "title": "Collect evidence on each option",
+      "kind": "gather",
+      "tool": "research",
+      "accept": ["research", "web_search"]
+    },
+    {
+      "title": "Check the deciding claim in the strongest source",
+      "kind": "verify",
+      "tool": "web_read",
+      "accept": ["web_read", "browser_open"],
+      "requiresEvidence": true,
+      "optional": true
+    },
+    {
+      "title": "Compare on the same criteria and recommend one",
+      "kind": "answer"
+    }
+  ],
+  "requireCitations": 2,
+  "requireCitationHosts": 2
+}

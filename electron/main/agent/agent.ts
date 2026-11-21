@@ -2,8 +2,21 @@ import type { Settings, ToolRun } from '../../../shared/types'
 import { mapLimit } from '../../../shared/concurrency'
 import type { Memory } from './memory'
 import type { ModelManager } from './model-manager'
-import type { ModelMetrics, OllamaMessage } from './ollama'
+import type { ModelMetrics, OllamaMessage, SamplingOptions } from './ollama'
 import { streamChat } from './ollama'
+import { extractUrls, normaliseUrl } from '../../../shared/citations'
+import { contextBudgetChars, fitContext, truncateToolResult } from '../../../shared/context'
+import {
+  acceptedTools,
+  answerGap,
+  openRequiredSteps,
+  planPrompt,
+  replanPlan,
+  verifyPlan,
+  type PlanEvidence
+} from '../../../shared/plan'
+import { alternativesFor, planForTurn } from '../../../shared/planner'
+import { listPlaybooks } from './playbooks'
 import { cacheReusePercent } from '../../../shared/metrics'
 import { nudgeFor, stallReason } from '../../../shared/completion'
 import { buildSystemPrompt, type PromptContext } from './prompt'
@@ -46,6 +59,10 @@ export interface AgentInput {
   openTask?: string
   /** Structured task record, persisted outside the model context. */
   taskState?: TaskState
+  /** Deterministic decoding for measurements. The app leaves this unset. */
+  sampling?: SamplingOptions
+  /** Research may legitimately take longer than a spoken question. */
+  timeBudgetMs?: number
   emit: (event: AgentEvent) => void
 }
 
@@ -57,11 +74,15 @@ export interface AgentOutcome {
   /** True when the turn stopped on its budget with the job unfinished. */
   incomplete: boolean
   objective: string
+  /** URLs that appeared in this turn's tool output. */
+  evidenceUrls: string[]
 }
 
 const MAX_TOOL_ROUNDS = 16
 /** A turn may chain many steps, but not forever: the person is waiting. */
 const TIME_BUDGET_MS = 240_000
+/** A research plan is the one deliberate exception; it is not a spoken answer. */
+const RESEARCH_TIME_BUDGET_MS = 600_000
 const MAX_NUDGES = 2
 const MAX_PARALLEL_TOOLS = 3
 
@@ -93,14 +114,33 @@ interface PreparedCall {
 export async function runAgent(input: AgentInput): Promise<AgentOutcome> {
   const allTools = toolDefinitions()
   const objective = input.userText.trim()
-  const actionable = needsSiteCheck(objective) || needsMusicTaste(objective) || Boolean(input.openTask)
   const tools = shortlistTools(`${objective} ${input.turnHint ?? ''} ${input.openTask ?? ''}`, allTools)
+  const playbooks = listPlaybooks()
+  let plan = planForTurn(objective, tools, playbooks)
+  // A plan with no action is answered from context. Only discovery stays on the
+  // table, so an unexpected need can still escalate without inviting a tool
+  // lookup for a question the context already answers.
+  const answerOnly = plan.steps.length === 1 && plan.steps[0].kind === 'answer'
+  const offered = answerOnly
+    ? tools.filter((tool) => tool.function.name === 'discover_tools')
+    : tools
   const task = input.taskState
+  task?.plan(plan.steps.map((step) => step.title))
+  const actionable =
+    needsSiteCheck(objective) ||
+    needsMusicTaste(objective) ||
+    Boolean(input.openTask) ||
+    plan.steps.some((step) => step.kind !== 'answer' && step.kind !== 'clarify')
 
   input.emit({
     type: 'phase',
     phase: 'planning',
-    detail: actionable ? 'Working out the approach.' : 'Understanding the request.'
+    detail:
+      plan.steps.length > 1
+        ? `${plan.steps.length} steps${plan.playbookId ? ` · ${plan.playbookId}` : ''}.`
+        : actionable
+          ? 'Working out the approach.'
+          : 'Understanding the request.'
   })
 
   const [recall] = await Promise.all([
@@ -116,12 +156,13 @@ export async function runAgent(input: AgentInput): Promise<AgentOutcome> {
     volume: input.machine.volume,
     facts,
     recall,
-    tools,
+    tools: offered,
     settings: input.settings,
     turnHint: input.turnHint,
     objective,
     openTask: input.openTask,
-    taskState: task?.prompt()
+    taskState: task?.prompt(),
+    plan: planPrompt(plan)
   })
 
   const messages: OllamaMessage[] = [
@@ -135,9 +176,35 @@ export async function runAgent(input: AgentInput): Promise<AgentOutcome> {
   const trace = new TurnTrace({
     objective,
     model: input.settings.model,
-    offered: tools.map((tool) => tool.function.name)
+    offered: offered.map((tool) => tool.function.name),
+    plan: `${plan.source}${plan.playbookId ? `:${plan.playbookId}` : ''} ${plan.steps.length} steps`
   })
+  const evidence: PlanEvidence = { tools: [], urls: [] }
+  const evidenceKeys = new Set<string>()
+  const rememberUrls = (text: string): void => {
+    for (const url of extractUrls(text)) {
+      const key = normaliseUrl(url)
+      if (!key || evidenceKeys.has(key)) continue
+      evidenceKeys.add(key)
+      evidence.urls.push(url)
+      if (evidence.urls.length >= 24) break
+    }
+  }
+  const contextCharsBudget = contextBudgetChars(
+    input.settings.contextWindow || 8_192,
+    input.settings.maxOutputTokens || 1_536
+  )
   const startedAt = Date.now()
+  const researchPlan = plan.steps.some(
+    (step) => step.tool === 'research' || (step.accept ?? []).includes('research')
+  )
+  const timeBudgetMs =
+    input.timeBudgetMs ?? (researchPlan ? RESEARCH_TIME_BUDGET_MS : TIME_BUDGET_MS)
+  let replanned = false
+  let toolUnavailable = false
+  let planNudges = 0
+  let answerOnlyNudges = 0
+  let citationNudges = 0
   let nudges = 0
   let lastToolName = ''
   let lastSummary = ''
@@ -149,7 +216,7 @@ export async function runAgent(input: AgentInput): Promise<AgentOutcome> {
 
   logLine(
     'agent',
-    `objective=${JSON.stringify(objective.slice(0, 160))} tools=${tools.length}/${allTools.length} promptChars=${system.length}${input.openTask ? ' resumed=true' : ''}`
+    `objective=${JSON.stringify(objective.slice(0, 160))} tools=${offered.length}/${allTools.length} promptChars=${system.length} plan=${plan.source}${plan.playbookId ? `:${plan.playbookId}` : ''} steps=${plan.steps.length}${input.openTask ? ' resumed=true' : ''}`
   )
 
   try {
@@ -157,7 +224,7 @@ export async function runAgent(input: AgentInput): Promise<AgentOutcome> {
       throwIfAborted(input.signal)
       rounds = round
 
-      if (Date.now() - startedAt > TIME_BUDGET_MS) {
+      if (Date.now() - startedAt > timeBudgetMs) {
         incomplete = true
         finalText =
           finalText ||
@@ -182,14 +249,18 @@ export async function runAgent(input: AgentInput): Promise<AgentOutcome> {
         numPredict: input.settings.maxOutputTokens || 1_536
       }
       const modelStartedAt = Date.now()
+      // A fresh view each round: the transcript keeps everything for the task
+      // state, but the model only receives what fits next to its answer.
+      const requestMessages = fitContext(messages, contextCharsBudget)
       const stream = await streamChat({
         url: input.settings.ollamaUrl,
         model: input.settings.model,
-        messages,
-        tools,
+        messages: requestMessages,
+        tools: offered,
         keepAlive: modelOptions.keepAlive,
         numCtx: modelOptions.numCtx,
         numPredict: modelOptions.numPredict,
+        sampling: input.sampling,
         signal: input.signal
       })
 
@@ -206,7 +277,7 @@ export async function runAgent(input: AgentInput): Promise<AgentOutcome> {
         if (chunk.toolCalls) accumulator.add(chunk.toolCalls)
       }
 
-      const promptChars = messages.reduce((sum, message) => sum + message.content.length, 0)
+      const promptChars = requestMessages.reduce((sum, message) => sum + message.content.length, 0)
       const cacheReusePct = cacheReusePercent(
         roundMetrics?.promptEvalCachedCount,
         roundMetrics?.promptEvalCount
@@ -223,9 +294,64 @@ export async function runAgent(input: AgentInput): Promise<AgentOutcome> {
       )
 
       const calls = accumulator.finish()
+
+      // The plan needs no action and no schemas were offered. A tool call here
+      // is a habit, not information: asking for the direct answer is cheaper
+      // and more correct than executing a timer lookup for "what time is it".
+      if (answerOnly && calls.length > 0) {
+        if (answerOnlyNudges < 1 && round < MAX_TOOL_ROUNDS) {
+          answerOnlyNudges += 1
+          trace.nudge(`answer-only: ignored ${calls[0].name}`)
+          task?.note(`answered from context; ignored an unnecessary ${calls[0].name} call`)
+          messages.push({
+            role: 'user',
+            content:
+              'This request is answered from the context already in this conversation. Do not call a tool. Answer now in one or two sentences.'
+          })
+          input.emit({ type: 'replace', text: '' })
+          continue
+        }
+        finalText =
+          roundText.trim() ||
+          'I have what I need in the current context, but I could not put it into an answer. Ask me again and I will keep it to the context.'
+        break
+      }
+
       if (calls.length === 0) {
         const reply = roundText.trim()
-        const stall = stallReason(reply, { usedTools: hadTools, actionable })
+
+        // A mandatory plan step that is still open is one more action, not a
+        // new request. Nudge once; a genuine blocker still gets to end the turn.
+        const open = plan.allowQuestion ? [] : openRequiredSteps(plan, evidence)
+        if (open.length > 0 && planNudges < 1 && round < MAX_TOOL_ROUNDS) {
+          planNudges += 1
+          const step = open[0]
+          trace.nudge(`plan open: ${step.title}`)
+          task?.note(`plan step still open: ${step.title}`)
+          messages.push({
+            role: 'user',
+            content: `The plan is not finished: "${step.title}". Do it now with ${acceptedTools(step).join(' or ')}, then answer from the result. If it is genuinely blocked, say exactly what blocked it in one line.`
+          })
+          input.emit({ type: 'replace', text: '' })
+          continue
+        }
+
+        // A citation is a URL that was actually in the evidence. Asking once
+        // for the missing URLs is cheaper and more reliable than a rewrite.
+        const gap = answerGap(plan, reply, evidence)
+        if (gap && citationNudges < 2 && round < MAX_TOOL_ROUNDS) {
+          citationNudges += 1
+          trace.nudge(`citations: ${gap}`)
+          task?.note(`answer not yet citable: ${gap}`)
+          messages.push({
+            role: 'user',
+            content: `The answer is not verifiable yet: ${gap}. Add the exact URL of each source you actually read, next to the claim it supports. Do not invent links and do not cite a page you did not open.`
+          })
+          input.emit({ type: 'replace', text: '' })
+          continue
+        }
+
+        const stall = stallReason(reply, { usedTools: hadTools, actionable, toolUnavailable })
 
         if (stall && nudges < MAX_NUDGES && round < MAX_TOOL_ROUNDS) {
           nudges += 1
@@ -248,7 +374,9 @@ export async function runAgent(input: AgentInput): Promise<AgentOutcome> {
           input.emit({ type: 'phase', phase: 'verifying', detail: 'Checking the result.' })
         }
         finalText = reply
-        if (nudges > 0) input.emit({ type: 'replace', text: reply })
+        if (nudges > 0 || planNudges > 0 || citationNudges > 0) {
+          input.emit({ type: 'replace', text: reply })
+        }
         break
       }
 
@@ -298,8 +426,59 @@ export async function runAgent(input: AgentInput): Promise<AgentOutcome> {
         input.emit({ type: 'tool-end', run: finished })
 
         if (outcome.openChat) forcedChat = true
-        messages.push({ role: 'tool', tool_name: item.call.name, content: outcome.content })
+        if (reportsUnavailable(item.call.name, outcome.content)) toolUnavailable = outcome.ok
+        evidence.tools.push({ name: item.call.name, ok: outcome.ok })
+        rememberUrls(outcome.content)
+        if (typeof item.call.args.url === 'string') rememberUrls(item.call.args.url)
+        messages.push({
+          role: 'tool',
+          tool_name: item.call.name,
+          content: truncateToolResult(item.call.name, outcome.content)
+        })
         task?.tool(item.call.name, outcome.ok, outcome.summary, outcome.content, item.call.args)
+      }
+
+      // Verify against what actually ran, then repair at most one blocked step.
+      // A second failure means the capability is missing, not the choice.
+      const verification = verifyPlan(plan, evidence)
+      if (!replanned && verification.failed.length > 0) {
+        const blocked = verification.failed[0]
+        const repaired = replanPlan(plan, {
+          evidence,
+          alternatives: alternativesFor(blocked, tools),
+          reason: `${blocked.tool ?? 'step'} failed`
+        })
+        if (repaired.changed) {
+          plan = repaired.plan
+          replanned = true
+          task?.plan(plan.steps.map((step) => step.title))
+          const next = plan.steps.find((step) => step.id === blocked.id)
+          messages.push({
+            role: 'system',
+            content: `Plan updated (${repaired.reason}). Do not repeat the failed call. ${
+              next
+                ? `Continue with "${next.title}" using ${acceptedTools(next).join(' or ')}.`
+                : 'Answer with what you already have and name the gap.'
+            }`
+          })
+          trace.nudge(`replan ${repaired.reason}`)
+          logLine('agent', `replanned: ${repaired.reason}`)
+        }
+      }
+
+      // The compact URL list survives even when a tool result is truncated or
+      // an old batch is dropped. It is the only source of citations the answer
+      // is allowed to use.
+      if (evidence.urls.length > 0) {
+        const content = `URLs actually seen this turn (cite these exact URLs; never invent one):\n${evidence.urls
+          .slice(0, 16)
+          .join('\n')}`
+        const existing = messages.findIndex(
+          (message, index) =>
+            index > 0 && message.role === 'system' && message.content.startsWith('URLs actually seen this turn')
+        )
+        if (existing >= 0) messages[existing] = { role: 'system', content }
+        else messages.push({ role: 'system', content })
       }
 
       // Re-state the compact task state after a batch. This is deliberately
@@ -336,7 +515,7 @@ export async function runAgent(input: AgentInput): Promise<AgentOutcome> {
     tools: toolRuns.map((run) => ({ name: run.name, status: run.status, ms: run.ms, summary: run.summary }))
   })
 
-  return { text: finalText, hadTools, toolRuns, forcedChat, incomplete, objective }
+  return { text: finalText, hadTools, toolRuns, forcedChat, incomplete, objective, evidenceUrls: evidence.urls }
 }
 
 async function executeRound(
@@ -451,6 +630,14 @@ function phaseForTool(name: string): AgentPhase {
 
 function humanTool(name: string): string {
   return name.replace(/_/g, ' ')
+}
+
+/** "Spotify is closed" is an answer, so offering to open it is not a stall. */
+function reportsUnavailable(name: string, content: string): boolean {
+  if (!['now_playing', 'music_taste', 'play_music', 'spotify_control'].includes(name)) return false
+  return /(?:not running|isn't running|is not running|isn't open|is not open|closed|nothing is playing|no track|not installed)/i.test(
+    content
+  )
 }
 
 function throwIfAborted(signal?: AbortSignal): void {

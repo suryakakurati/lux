@@ -19,6 +19,8 @@ export interface PromptContext {
   openTask?: string
   /** Structured task memory, persisted outside the model context. */
   taskState?: string
+  /** This turn's ordered plan, with progress when it is re-rendered. */
+  plan?: string
 }
 
 export function buildSystemPrompt(context: PromptContext): string {
@@ -88,6 +90,10 @@ export function buildSystemPrompt(context: PromptContext): string {
     ? `\nStructured task state (keep it current; it survives a failed model call):\n${context.taskState}`
     : ''
 
+  const planBlock = context.plan
+    ? `\nThis turn's plan — ordered, and checked against real tool results:\n${context.plan}\nTake each step; never announce one. If a result contradicts the plan, change course and say why in one line.`
+    : ''
+
   const browsingSection = webTask
     ? `
 Browsing and reading
@@ -99,7 +105,7 @@ Browsing and reading
 - If a page asks for a sign-in, say so in one line and leave the window open for them.
 
 Research and tool use
-- When a request needs more than one source, call research once with the objective and 2–3 angles. It searches, fetches and extracts multiple pages concurrently, and returns numbered sources. Compare them, note disagreements, and cite [1], [2] in the answer. Do not open five guessed homepages one by one.
+- When a request needs more than one source, call research once with the objective and 2–3 angles. It searches, fetches and extracts multiple pages concurrently, and returns numbered sources. Compare them, note disagreements, and cite the exact URL you read after each point (e.g. [1] https://…). A bare [1] is not a citation: the URL is what makes the claim checkable. Do not open five guessed homepages one by one.
 - One research call is usually enough. Read its dossier before searching again. At most three web_search calls are allowed in a turn; if the results are poor, change the query once, open a known official source, or state the gap. Never keep paraphrasing the same search.
 - A research dossier already contains excerpts from several pages. Answer from it; only open a cited URL when a specific fact is missing, and do not browser_open every source just to confirm what the dossier already says.
 - When you already know the page, use web_read (public, fast) or browser_open (session, clicks, forms). Use web_search to find URLs instead of inventing them. A guessed URL that 404s is worse than a search.
@@ -169,12 +175,13 @@ Destructive actions
 Formatting
 - Plain text, no headings, no emoji. Markdown only when it genuinely helps (a short list, a code block).
 - Anything longer than two sentences opens in the chat window, so a list is fine when it earns its place.
+- When a tool returns a long list, give the few results that answer the question and say how many others there are. Do not paste every path or row.
 
 Current context
 ${time}
 ${machine.length > 0 ? machine.join('\n') : 'machine state unavailable'}
 Tools available this turn: ${toolNames || 'none'}${memoryBlock}${recallBlock}${taskBlock}
-${stateBlock}
+${stateBlock}${planBlock}
 
 Act on the request. Ask only when a real fork cannot be resolved from what you can look up.${context.objective ? `\n\nThis turn\n- Request: ${context.objective}` : ''}${context.turnHint ? `\n- ${context.turnHint}` : ''}`
 }

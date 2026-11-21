@@ -1,6 +1,24 @@
 {
   "meta": {
     "generatedAt": "2026-11-20T22:38:29.238Z",
+    "provenanceNote": "Generated while HEAD was f188948 and the harness from 57d050d was still uncommitted. The measurements are the V.0 run, but this is not a reproducible, verified baseline. Use v0.0.1-baseline.json for comparisons.",
+    "schema": 0,
+    "harness": "lux-bench@1 (uncommitted)",
+    "baseline": false,
+    "verified": false,
+    "dirty": true,
+    "dirtyNote": "Harness and task set were uncommitted at run time.",
+    "diffHash": null,
+    "taskSetHash": null,
+    "runs": 1,
+    "modelDigest": null,
+    "ollamaVersion": null,
+    "sampling": {
+      "temperature": 0.35,
+      "topK": null,
+      "topP": null,
+      "seed": null
+    },
     "commit": "f188948",
     "model": "qwen3.5:latest",
     "ollamaUrl": "http://127.0.0.1:11434",

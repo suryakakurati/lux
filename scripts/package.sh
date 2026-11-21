@@ -41,6 +41,7 @@ npx @electron/packager . Lux \
   --icon=resources/Lux.icns \
   --extend-info=resources/info.plist \
   --extra-resource=resources/bin \
+  --extra-resource=playbooks \
   --extra-resource=resources/trayTemplate.png \
   --extra-resource=resources/trayTemplate@2x.png \
   --ignore="^/src" \

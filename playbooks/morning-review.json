@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "id": "morning-review",
+  "title": "Morning review",
+  "description": "Read the commitment ledger and say what is actually due.",
+  "keywords": ["morning review", "what is due", "overdue", "my commitments", "to do today", "today", "deadlines", "agenda"],
+  "examples": ["What do I have to do today?"],
+  "steps": [
+    {
+      "title": "Read the commitment ledger",
+      "kind": "gather",
+      "tool": "commitments",
+      "accept": ["commitments"]
+    },
+    {
+      "title": "Report what is due, nothing invented",
+      "kind": "answer"
+    }
+  ]
+}

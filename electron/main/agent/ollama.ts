@@ -51,15 +51,24 @@ export interface ModelMetrics {
   evalDurationMs?: number
 }
 
+export interface SamplingOptions {
+  temperature?: number
+  topK?: number
+  topP?: number
+  seed?: number
+  repeatPenalty?: number
+}
+
 export interface ChatOptions {
   url: string
   model: string
   messages: OllamaMessage[]
   tools?: OllamaTool[]
-  temperature?: number
   keepAlive?: string
   numCtx?: number
   numPredict?: number
+  /** Deterministic decoding for measurements; the app leaves this unset. */
+  sampling?: SamplingOptions
   signal?: AbortSignal
 }
 
@@ -84,9 +93,15 @@ export async function streamChat(options: ChatOptions): Promise<AsyncGenerator<S
         stream: true,
         keep_alive: options.keepAlive ?? '30m',
         options: {
-          temperature: options.temperature ?? 0.35,
+          temperature: options.sampling?.temperature ?? 0.35,
           num_ctx: options.numCtx ?? 8_192,
-          num_predict: options.numPredict ?? 1_536
+          num_predict: options.numPredict ?? 1_536,
+          ...(options.sampling?.topK !== undefined ? { top_k: options.sampling.topK } : {}),
+          ...(options.sampling?.topP !== undefined ? { top_p: options.sampling.topP } : {}),
+          ...(options.sampling?.seed !== undefined ? { seed: options.sampling.seed } : {}),
+          ...(options.sampling?.repeatPenalty !== undefined
+            ? { repeat_penalty: options.sampling.repeatPenalty }
+            : {})
         }
       }),
       signal: controller.signal

@@ -23,7 +23,10 @@ const STOP = new Set([
   'doing', 'done', 'get', 'got', 'give', 'want', 'need', 'like', 'help', 'just', 'now',
   'some', 'any', 'all', 'out', 'into', 'about', 'there', 'here', 'them', 'they', 'its',
   'our', 'not', 'but', 'then', 'than', 'too', 'very', 'also', 'use', 'using', 'make',
-  'mac', 'lux', 'thing', 'things', 'stuff', 'something', 'anything', 'much', 'many'
+  'mac', 'lux', 'thing', 'things', 'stuff', 'something', 'anything', 'much', 'many',
+  // "right now" must not select now_playing, and "time" must not prefix-match
+  // a timer tool; neither is a capability word on its own.
+  'time', 'right'
 ])
 
 /** Always offered: the tools that answer "what is going on" cheaply. */
@@ -31,7 +34,6 @@ const CORE = [
   'open_app',
   'system_status',
   'clipboard_read',
-  'set_timer',
   'discover_tools'
 ]
 
@@ -61,6 +63,10 @@ const EXPANSIONS: { pattern: RegExp; names: string[] }[] = [
     names: ['find_files', 'open_path', 'quick_look', 'search_notes', 'discover_tools']
   },
   {
+    pattern: /\b(timers?|alarms?|remind|countdown|minutes?)\b/i,
+    names: ['set_timer', 'list_timers', 'discover_tools']
+  },
+  {
     pattern: /\b(music|spotify|song|track|album|playlist|listen|play)\b/i,
     names: ['music_taste', 'play_music', 'spotify_search', 'spotify_control', 'now_playing', 'apple_music_control']
   }
@@ -86,7 +92,10 @@ function scoreTool(tool: ToolSchema, query: string[]): number {
   for (const word of query) {
     for (const part of nameTokens) {
       if (part === word) score += 6
-      else if (part.startsWith(word) || word.startsWith(part)) score += 3
+      // Prefixes only count when both words are long enough to mean something:
+      // "timer" must not match "time", and "play" must not match "playing".
+      else if (part.startsWith(word) && word.length >= 5) score += 3
+      else if (word.startsWith(part) && part.length >= 5) score += 3
     }
     if (descriptionTokens.has(word)) score += 1
   }

@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "id": "find-file",
+  "title": "Find a file",
+  "description": "Locate files by name and report the real paths, without opening anything.",
+  "keywords": ["find file", "find files", "locate", "screenshot", "where is", "file name"],
+  "examples": ["Find files on this Mac whose name contains 'screenshot'"],
+  "steps": [
+    {
+      "title": "Search the filesystem for matching names",
+      "kind": "gather",
+      "tool": "find_files",
+      "accept": ["find_files"]
+    },
+    {
+      "title": "Report a few paths and say how many were found in total",
+      "kind": "answer"
+    }
+  ]
+}

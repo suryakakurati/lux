@@ -72,7 +72,9 @@ export class TaskStateStore {
         startedAt: Date.now(),
         updatedAt: Date.now(),
         status: 'running',
-        plan: initialPlan(clean),
+        // The planner sets this before the first model call. Keeping it empty
+        // here avoids a second, competing plan guessed from the wording.
+        plan: [],
         steps: [],
         urls: [],
         discoveries: [],
@@ -200,13 +202,6 @@ export class TaskState {
     this.record.updatedAt = Date.now()
     this.save()
   }
-}
-
-function initialPlan(objective: string): string[] {
-  if (/\b(research|investigat|compare|latest|developments?|sources?|survey|find out)\b/i.test(objective)) {
-    return ['Search for relevant sources', 'Read the strongest sources', 'Compare and verify claims', 'Answer with citations']
-  }
-  return ['Understand the request', 'Gather what is needed', 'Complete the action', 'Verify and report']
 }
 
 function firstUrl(args: Record<string, unknown>, content: string): string | undefined {

@@ -2,9 +2,11 @@
  * Pure benchmark definitions and checks.
  *
  * The harness itself needs a model, a Mac and several minutes. Everything in
- * this file is deliberately model-free so task success rules and summary
- * statistics can be unit tested.
+ * this file is deliberately model-free so task success rules, citation checks
+ * and summary statistics can be unit tested.
  */
+
+import { citationFailure, citationStats } from './citations.ts'
 
 export type BenchCategory = 'trivial' | 'one-tool' | 'multi-tool' | 'research' | 'ambiguous'
 
@@ -34,12 +36,20 @@ export interface BenchTask {
    * underdetermined.
    */
   allowQuestionInsteadOfTools?: boolean
+  /** Distinct source URLs the answer must cite. */
+  requiredCitations?: number
+  /** Distinct hosts among the cited sources. */
+  requiredCitationHosts?: number
+  /** Defaults to true: every cited URL must have appeared in tool output. */
+  citationsFromEvidence?: boolean
 }
 
 export interface BenchCheckInput {
   text: string
   /** Names of calls that completed successfully. */
   toolNames: string[]
+  /** Every URL returned by this turn's tools. */
+  evidenceUrls?: string[]
   rounds: number
   incomplete: boolean
 }
@@ -58,7 +68,7 @@ export interface BenchTurnResult {
   wallMs: number
   /** First non-thinking content token. */
   ttftMs?: number
-  /** When the full reply was handed to speech in V.0. */
+  /** When the full reply was handed to speech. */
   ttfswMs: number
   promptTokens: number
   evalTokens: number
@@ -72,6 +82,12 @@ export interface BenchTurnResult {
   /** Kept in memory for checks; the committed report redacts it. */
   text: string
   replyChars: number
+  /** Normalised URLs cited in the reply. Raw only. */
+  citedUrls?: string[]
+  /** Cited URLs that also appeared in tool output. */
+  citationsBacked?: number
+  /** Cited URLs that were never seen in tool output. */
+  citationsUnbacked?: number
 }
 
 export interface BenchSummary {
@@ -84,11 +100,48 @@ export interface BenchSummary {
   medianMultiToolWallMs?: number
   medianMultiToolTtftMs?: number
   multiToolTurns: number
+  medianTrivialWallMs?: number
+  medianOneToolWallMs?: number
+  medianResearchWallMs?: number
   promptTokens: number
   evalTokens: number
   cachedPromptTokens: number
   cacheReusePct?: number
   medianRounds?: number
+  citationTurns: number
+}
+
+/** One task measured across repeated runs. */
+export interface BenchTaskAggregate {
+  id: string
+  category: BenchCategory
+  prompt: string
+  runs: number
+  passes: number
+  passRate: number
+  /** True only when every run passed. A flaky task is not a stable success. */
+  success: boolean
+  flaky: boolean
+  failureReasons: string[]
+  wallMs: number
+  ttftMs?: number
+  ttfswMs: number
+  promptTokens: number
+  evalTokens: number
+  cachedPromptTokens: number
+  cacheReusePct?: number
+  rounds: number
+  toolRounds: number
+  toolCalls: BenchToolCall[]
+  citationsBacked: number
+  citationsUnbacked: number
+  replyChars: number
+}
+
+export interface BenchAggregate {
+  runs: number
+  summary: BenchSummary
+  tasks: BenchTaskAggregate[]
 }
 
 export function median(values: number[]): number | undefined {
@@ -105,6 +158,8 @@ export function summariseBench(results: BenchTurnResult[]): BenchSummary {
   const promptTokens = results.reduce((sum, result) => sum + result.promptTokens, 0)
   const evalTokens = results.reduce((sum, result) => sum + result.evalTokens, 0)
   const cachedPromptTokens = results.reduce((sum, result) => sum + result.cachedPromptTokens, 0)
+  const wallFor = (category: BenchCategory): number | undefined =>
+    median(results.filter((result) => result.category === category).map((result) => result.wallMs))
   return {
     count: results.length,
     successes,
@@ -115,13 +170,91 @@ export function summariseBench(results: BenchTurnResult[]): BenchSummary {
     medianMultiToolWallMs: median(multi.map((result) => result.wallMs)),
     medianMultiToolTtftMs: median(multi.map((result) => result.ttftMs ?? NaN)),
     multiToolTurns: multi.length,
+    medianTrivialWallMs: wallFor('trivial'),
+    medianOneToolWallMs: wallFor('one-tool'),
+    medianResearchWallMs: wallFor('research'),
     promptTokens,
     evalTokens,
     cachedPromptTokens,
     cacheReusePct:
       promptTokens > 0 ? Math.round((cachedPromptTokens / promptTokens) * 100) : undefined,
-    medianRounds: median(results.map((result) => result.rounds))
+    medianRounds: median(results.map((result) => result.rounds)),
+    citationTurns: results.filter((result) => (result.citationsBacked ?? 0) > 0).length
   }
+}
+
+/**
+ * Repeated runs, reduced to one comparable row per task.
+ *
+ * A task counts as a success only when every run passed. Wall time and tokens
+ * are the median of the runs, so one slow outlier cannot define the baseline.
+ */
+export function aggregateBenchRuns(runs: BenchTurnResult[][]): BenchAggregate {
+  const byId = new Map<string, BenchTurnResult[]>()
+  for (const run of runs) {
+    for (const result of run) {
+      const list = byId.get(result.id) ?? []
+      list.push(result)
+      byId.set(result.id, list)
+    }
+  }
+
+  const tasks: BenchTaskAggregate[] = []
+  for (const [id, list] of byId) {
+    const first = list[0]
+    const passes = list.filter((result) => result.success).length
+    const failures = list.filter((result) => !result.success && result.failureReason)
+    const wallMs = median(list.map((result) => result.wallMs)) ?? first.wallMs
+    const ttft = median(list.map((result) => result.ttftMs ?? NaN))
+    tasks.push({
+      id,
+      category: first.category,
+      prompt: first.prompt,
+      runs: list.length,
+      passes,
+      passRate: Math.round((passes / list.length) * 100),
+      success: passes === list.length,
+      flaky: passes > 0 && passes < list.length,
+      failureReasons: [...new Set(failures.map((result) => result.failureReason as string))],
+      wallMs,
+      ...(ttft === undefined ? {} : { ttftMs: ttft }),
+      ttfswMs: median(list.map((result) => result.ttfswMs)) ?? wallMs,
+      promptTokens: median(list.map((result) => result.promptTokens)) ?? 0,
+      evalTokens: median(list.map((result) => result.evalTokens)) ?? 0,
+      cachedPromptTokens: median(list.map((result) => result.cachedPromptTokens)) ?? 0,
+      cacheReusePct: median(list.map((result) => result.cacheReusePct ?? NaN)),
+      rounds: median(list.map((result) => result.rounds)) ?? first.rounds,
+      toolRounds: median(list.map((result) => result.toolRounds)) ?? first.toolRounds,
+      toolCalls: first.toolCalls,
+      citationsBacked: median(list.map((result) => result.citationsBacked ?? 0)) ?? 0,
+      citationsUnbacked: median(list.map((result) => result.citationsUnbacked ?? 0)) ?? 0,
+      replyChars: Math.round(median(list.map((result) => result.replyChars)) ?? first.replyChars)
+    })
+  }
+  tasks.sort((a, b) => runs[0].findIndex((result) => result.id === a.id) - runs[0].findIndex((result) => result.id === b.id))
+
+  const asTurns: BenchTurnResult[] = tasks.map((task) => ({
+    id: task.id,
+    category: task.category,
+    prompt: task.prompt,
+    wallMs: task.wallMs,
+    ...(task.ttftMs === undefined ? {} : { ttftMs: task.ttftMs }),
+    ttfswMs: task.ttfswMs,
+    promptTokens: task.promptTokens,
+    evalTokens: task.evalTokens,
+    cachedPromptTokens: task.cachedPromptTokens,
+    ...(task.cacheReusePct === undefined ? {} : { cacheReusePct: task.cacheReusePct }),
+    rounds: task.rounds,
+    toolRounds: task.toolRounds,
+    toolCalls: task.toolCalls,
+    success: task.success,
+    text: '',
+    replyChars: task.replyChars,
+    citationsBacked: task.citationsBacked,
+    citationsUnbacked: task.citationsUnbacked
+  }))
+
+  return { runs: runs.length, summary: summariseBench(asTurns), tasks }
 }
 
 /** Returns null when the task passed, or a short reason when it did not. */
@@ -152,8 +285,25 @@ export function checkBenchTask(task: BenchTask, input: BenchCheckInput): string 
   if (task.replyMaxChars !== undefined && input.text.trim().length > task.replyMaxChars) {
     return `reply longer than ${task.replyMaxChars} characters`
   }
+  if (task.requiredCitations !== undefined && task.requiredCitations > 0) {
+    const citationProblem = citationFailure(input.text, input.evidenceUrls ?? [], {
+      citations: task.requiredCitations,
+      hosts: task.requiredCitationHosts,
+      fromEvidence: task.citationsFromEvidence !== false
+    })
+    if (citationProblem) return citationProblem
+  }
   if (task.replyPattern && !task.replyPattern.test(input.text)) {
     return `reply did not match ${task.replyPattern}`
   }
   return null
+}
+
+/** Citation counts for the report, derived from the same rules as the check. */
+export function benchCitationCounts(
+  text: string,
+  evidenceUrls: string[]
+): { backed: number; unbacked: number; cited: string[] } {
+  const stats = citationStats(text, evidenceUrls)
+  return { backed: stats.backed, unbacked: stats.unbacked, cited: stats.cited }
 }

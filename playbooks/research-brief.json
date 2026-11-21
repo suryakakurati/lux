@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "id": "research-brief",
+  "title": "Research brief",
+  "description": "Answer a question from several live sources and cite the ones actually read.",
+  "keywords": ["research", "sources", "current state", "landscape", "investigate", "survey"],
+  "examples": ["Research the current state of local LLM runtimes and cite two sources"],
+  "steps": [
+    {
+      "title": "Search several angles and collect a source dossier",
+      "kind": "gather",
+      "tool": "research",
+      "accept": ["research", "web_search"]
+    },
+    {
+      "title": "Open the strongest source if the dossier leaves a gap",
+      "kind": "verify",
+      "tool": "web_read",
+      "accept": ["web_read", "browser_open"],
+      "requiresEvidence": true,
+      "optional": true
+    },
+    {
+      "title": "Answer with the source URLs actually read",
+      "kind": "answer"
+    }
+  ],
+  "requireCitations": 2,
+  "requireCitationHosts": 2
+}

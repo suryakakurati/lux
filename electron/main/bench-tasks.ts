@@ -30,7 +30,8 @@ const NO_SIDE_EFFECTS = [
   'browser_fill',
   'browser_submit',
   'browser_press',
-  'focus_preset'
+  'focus_preset',
+  'save_playbook'
 ]
 
 export const BENCH_TASKS: BenchTask[] = [
@@ -172,32 +173,42 @@ export const BENCH_TASKS: BenchTask[] = [
   {
     id: 'research-runtimes',
     category: 'research',
-    prompt: 'Research the current state of local LLM runtimes for a 16 GB Mac and cite at least two sources.',
+    prompt:
+      'Research the current state of local LLM runtimes for a 16 GB Mac. Give at least two sources, each with its exact URL.',
     expectedToolsAny: ['research', 'web_search'],
     forbiddenTools: NO_SIDE_EFFECTS,
-    replyPattern: /(https?:\/\/|\[\d+\])/,
     replyMinChars: 250,
-    maxRounds: 6
+    requiredCitations: 2,
+    requiredCitationHosts: 2,
+    citationsFromEvidence: true,
+    maxRounds: 8
   },
   {
     id: 'compare-runners',
     category: 'research',
-    prompt: 'Compare two local model runners and recommend one for a 16 GB Mac, with sources.',
+    prompt:
+      'Compare two local model runners and recommend one for a 16 GB Mac. Give at least two sources with their URLs.',
     expectedToolsAny: ['research', 'web_search'],
     forbiddenTools: NO_SIDE_EFFECTS,
-    replyPattern: /(https?:\/\/|\[\d+\])/,
     replyMinChars: 250,
-    maxRounds: 6
+    requiredCitations: 2,
+    requiredCitationHosts: 2,
+    citationsFromEvidence: true,
+    maxRounds: 8
   },
   {
     id: 'ollama-release',
     category: 'research',
-    prompt: 'What changed in the latest Ollama release? Use current sources.',
+    prompt:
+      'What changed in the latest Ollama release? Use current sources and include the URL you relied on.',
     expectedToolsAny: ['research', 'web_search'],
     forbiddenTools: NO_SIDE_EFFECTS,
     replyPattern: /Ollama/i,
     replyMinChars: 120,
-    maxRounds: 6
+    requiredCitations: 1,
+    requiredCitationHosts: 1,
+    citationsFromEvidence: true,
+    maxRounds: 8
   },
   {
     id: 'handle-music',

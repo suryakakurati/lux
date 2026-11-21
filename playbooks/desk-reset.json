@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "id": "desk-reset",
+  "title": "Desk reset",
+  "description": "Set up a focus session: the preset, then music, with each change confirmed.",
+  "keywords": ["focus mode", "desk reset", "reset my desk", "set up focus", "music for work", "study session"],
+  "examples": ["Set up my study focus session"],
+  "steps": [
+    {
+      "title": "Apply the focus preset",
+      "kind": "act",
+      "tool": "focus_preset",
+      "accept": ["focus_preset"]
+    },
+    {
+      "title": "Start the music for the session",
+      "kind": "act",
+      "tool": "play_music",
+      "accept": ["play_music"],
+      "optional": true
+    },
+    {
+      "title": "Report what changed",
+      "kind": "answer"
+    }
+  ]
+}

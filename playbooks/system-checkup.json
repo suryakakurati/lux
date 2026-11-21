@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "id": "system-checkup",
+  "title": "System checkup",
+  "description": "Report CPU, memory, disk and battery from the machine itself.",
+  "keywords": ["cpu", "memory", "disk", "battery", "machine health", "system status", "ram"],
+  "examples": ["How is this machine doing — CPU, memory and disk?"],
+  "steps": [
+    {
+      "title": "Read current CPU, memory, disk and battery",
+      "kind": "gather",
+      "tool": "system_status",
+      "accept": ["system_status", "battery_status"]
+    },
+    {
+      "title": "Report the numbers without estimating",
+      "kind": "answer"
+    }
+  ]
+}

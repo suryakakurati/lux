@@ -7,11 +7,12 @@
  * sums RSS across its own process tree, then stops that tree. It never touches
  * an already-running Lux and never kills by process name.
  *
- * The result is written to docs/benchmarks/idle-rss.json and folded into the
- * baseline report if docs/benchmarks/v0.0-baseline.json already exists.
+ * The result is written to docs/benchmarks/idle-rss.json, with the commit it
+ * was measured against. `npm run bench` reads it into its own report, so the
+ * sample time is never confused with the turn timings.
  */
 import { execFileSync, spawn } from 'node:child_process'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -107,25 +108,31 @@ const idleRssMb = Math.round(totalKb / 1024)
 
 const docs = join(root, 'docs', 'benchmarks')
 mkdirSync(docs, { recursive: true })
+const commit = git(['rev-parse', '--short', 'HEAD'])
+const dirty = (git(['status', '--porcelain']) ?? '').length > 0
 const record = {
   at: new Date().toISOString(),
   idleRssMb,
   processes: tree.length,
   waitMs,
+  commit,
+  dirty,
   note: 'Sum of RSS across the app and all of its child processes after the settle window. Ollama is a separate process and is not counted.'
 }
 writeFileSync(join(docs, 'idle-rss.json'), `${JSON.stringify(record, null, 2)}\n`, 'utf8')
-
-const baselinePath = join(docs, 'v0.0-baseline.json')
-if (existsSync(baselinePath)) {
-  const baseline = JSON.parse(readFileSync(baselinePath, 'utf8'))
-  baseline.idleRssMb = idleRssMb
-  baseline.idleRss = record
-  writeFileSync(baselinePath, `${JSON.stringify(baseline, null, 2)}\n`, 'utf8')
-  console.log(`[rss] updated ${baselinePath}`)
-}
-
 console.log(`[rss] idle RSS ${idleRssMb} MB across ${tree.length} processes`)
+
+function git(args) {
+  try {
+    return execFileSync('git', args, {
+      cwd: root,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore']
+    }).trim()
+  } catch {
+    return null
+  }
+}
 
 stopTree(child.pid, tree)
 await new Promise((resolveWait) => setTimeout(resolveWait, 1_000))

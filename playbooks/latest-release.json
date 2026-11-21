@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "id": "latest-release",
+  "title": "Latest release",
+  "description": "Find what changed in the newest release of a product from current sources.",
+  "keywords": ["latest release", "release notes", "changelog", "what changed", "new version", "latest", "updates"],
+  "examples": ["What changed in the latest Ollama release?"],
+  "steps": [
+    {
+      "title": "Find the current release notes",
+      "kind": "gather",
+      "tool": "research",
+      "accept": ["research", "web_search"]
+    },
+    {
+      "title": "Read the release notes page",
+      "kind": "verify",
+      "tool": "web_read",
+      "accept": ["web_read", "browser_open"],
+      "requiresEvidence": true,
+      "optional": true
+    },
+    {
+      "title": "Summarise the changes and name the version",
+      "kind": "answer"
+    }
+  ],
+  "requireCitations": 1,
+  "requireCitationHosts": 1
+}

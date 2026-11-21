@@ -69,13 +69,15 @@ export function endsWithQuestion(text: string): boolean {
   return QUESTION_END.test(text.trim())
 }
 
-export type StallKind = 'promise' | 'offer' | 'false-limit'
+export type StallKind = 'promise' | 'offer' | 'false-limit' | 'truncated'
 
 export interface StopContext {
   /** At least one tool has run this turn. */
   usedTools: boolean
   /** The request is one Lux can act on with its tools. */
   actionable: boolean
+  /** The tool's answer was "nothing is running"; offering the next step is fine. */
+  toolUnavailable?: boolean
 }
 
 /**
@@ -94,13 +96,24 @@ const DELIVERED_LENGTH = 240
 export function stallReason(text: string, context: StopContext): StallKind | null {
   const reply = text.trim()
   if (!reply) return context.usedTools ? 'promise' : null
+  // A generation that stopped on a function word is not an answer: "I", "The",
+  // "For a". Short numeric answers ("50%") and complete short sentences are
+  // left alone.
+  const dangling = /(?:^|\s)(?:a|an|the|and|or|of|to|for|with|from|in|on|at|is|are|was|were|it|this|that|by|as|but|if|than|then|my|i)\s*$/i
+  if (
+    !/\d/.test(reply) &&
+    !/^(?:yes|no|ok|done)$/i.test(reply) &&
+    (reply.length <= 3 || (reply.length <= 24 && dangling.test(reply)))
+  ) {
+    return 'truncated'
+  }
   const canAct = context.usedTools || context.actionable
   if (!canAct) return null
   if (promisesAction(reply)) return 'promise'
   // A closing "want me to play one?" after a real set of recommendations is an
   // answer with an offer attached, not a turn that died. Only a short reply that
   // offers instead of delivering is a stall.
-  if (offersToAct(reply) && reply.length < DELIVERED_LENGTH) return 'offer'
+  if (offersToAct(reply) && !context.toolUnavailable && reply.length < DELIVERED_LENGTH) return 'offer'
   if (claimsFalseLimit(reply)) return 'false-limit'
   return null
 }
@@ -113,6 +126,9 @@ export function stallReason(text: string, context: StopContext): StallKind | nul
  */
 export function nudgeFor(kind: StallKind, objective: string): string {
   const target = objective.trim() || 'the request'
+  if (kind === 'truncated') {
+    return `Your last reply stopped before it answered: ${target}. Write the complete answer now from the evidence already gathered. Do not restart the research, and do not call another tool unless a specific fact is missing.`
+  }
   if (kind === 'false-limit') {
     return `You have the tools for this: ${target}. Do not describe a limitation. Call the tool that reads it now, then answer from what it returned.`
   }

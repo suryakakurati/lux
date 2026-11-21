@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "id": "read-page",
+  "title": "Read a page",
+  "description": "Read one page the person named and answer from its text, citing the URL.",
+  "keywords": ["read page", "read url", "summarise", "summarize", "this link", "article", "whole page"],
+  "examples": ["Read this page and summarise the main argument"],
+  "steps": [
+    {
+      "title": "Read the page",
+      "kind": "gather",
+      "tool": "web_read",
+      "accept": ["web_read", "browser_open", "browser_read"]
+    },
+    {
+      "title": "Answer from the page and cite its URL",
+      "kind": "answer"
+    }
+  ],
+  "requireCitations": 1,
+  "requireCitationHosts": 1
+}

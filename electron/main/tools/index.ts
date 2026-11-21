@@ -9,6 +9,7 @@ import { mediaTools } from './media'
 import { musicTools } from './music'
 import { miscTools } from './misc'
 import { noteTools } from './notes'
+import { playbookTools } from './playbooks'
 import { researchTools } from './research'
 import { specialistTools } from './specialist'
 import { systemTools } from './system'
@@ -33,6 +34,7 @@ export const TOOLS: ToolDef[] = [
   ...commitmentTools,
   ...fileTools,
   ...noteTools,
+  ...playbookTools,
   ...vaultTools,
   ...miscTools
 ]

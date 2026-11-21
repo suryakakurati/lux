@@ -32,6 +32,8 @@ export interface TraceInput {
   objective: string
   model: string
   offered: string[]
+  /** One line: plan source, playbook and step count. */
+  plan?: string
 }
 
 export interface TraceOutcome {
@@ -103,6 +105,7 @@ export class TurnTrace {
       objective: this.input.objective.slice(0, 300),
       model: this.input.model,
       offered: this.input.offered,
+      plan: this.input.plan ?? null,
       nudges: outcome.nudges,
       incomplete: outcome.incomplete,
       rounds: outcome.rounds,

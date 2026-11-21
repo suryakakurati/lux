@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "id": "workspace-recall",
+  "title": "Recall from notes",
+  "description": "Look through the person's notes and vault before saying something is not written down.",
+  "keywords": ["notes", "vault", "obsidian", "written down", "wrote down", "where i wrote", "where did i", "recall", "find in my notes"],
+  "examples": ["Find where I wrote down the deployment steps"],
+  "steps": [
+    {
+      "title": "Search the vault and notes",
+      "kind": "gather",
+      "tool": "vault_search",
+      "accept": ["vault_search", "search_notes"]
+    },
+    {
+      "title": "Read the note that matched",
+      "kind": "verify",
+      "tool": "vault_read",
+      "accept": ["vault_read", "search_notes"],
+      "optional": true
+    },
+    {
+      "title": "Answer with what the note says",
+      "kind": "answer"
+    }
+  ]
+}

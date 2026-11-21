@@ -29,4 +29,6 @@ resources/Lux.icns
 *.xcworkspace/xcuserdata/
 
 # Large or raw benchmark output
+# latest.json is a working run; only a verified baseline is committed.
 docs/benchmarks/raw/
+docs/benchmarks/latest.json
