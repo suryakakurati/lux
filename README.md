@@ -17,7 +17,8 @@ hold right ⌥  ──▶  speak  ──▶  release  ──▶  transcribe  ─
 ## Contents
 
 - [Status](#status)
-- [What V.0.1 adds](#what-v01-adds)
+- [What 0.2 adds](#what-02-adds)
+- [What 0.1 added](#what-01-added)
 - [Requirements](#requirements)
 - [Setup](#setup)
 - [Running](#running)
@@ -37,7 +38,19 @@ Version 0.2.1. macOS 13+ on Apple silicon; developed and measured on an M4 MacBo
 The app is single-user and developer-signed. It is usable every day, but packaging is still
 developer-grade (no installer, ad-hoc signing).
 
-## What V.0.1 adds
+## What 0.2 adds
+
+- **A local neural voice.** `npm run voice:setup` installs a Piper voice under `~/.cache/lux`.
+  "Automatic" still prefers a Premium or Enhanced macOS voice; when none is installed it speaks
+  through the neural one. A selected voice that is later deleted falls back instead of going silent.
+- **Notes you can read back.** `read_note` returns a note in full, so writing and reading one is a
+  single round trip. `find_files` reports size and modification time, newest first.
+- **Per-app memory.** `top_processes` ranks what is actually resident, with totals per app, instead
+  of one machine-wide number.
+- **A voice picker, and an honest version.** Settings lists each installed voice with its language
+  and tier, and the version shown in the app is read from the bundle rather than typed into the UI.
+
+## What 0.1 added
 
 - **Planning with verification.** Non-trivial requests get a short plan with a definition of done.
   Each step is checked against real tool evidence; a blocked step is repaired once instead of being
@@ -79,6 +92,7 @@ npm install
 npm run hotkey        # compile the right-⌥ listener
 npm run assets        # draw the menu-bar glyph
 npm run stt:setup     # optional: whisper.cpp + ggml-base.en
+npm run voice:setup   # optional: neural voice for "Automatic"
 npm start             # build and launch
 ```
 
@@ -107,6 +121,7 @@ npm run dev
 | `npm run audit` | Live integration checks against this Mac |
 | `npm run smoke -- "how's my battery?"` | One end-to-end agent turn |
 | `npm run package` | `release/Lux-darwin-arm64/Lux.app` |
+| `npm run voice:setup` | Install the optional Piper neural voice |
 
 Useful diagnostics:
 
@@ -203,7 +218,7 @@ turn can be reconstructed or resumed instead of restarted.
 The registry has 58 tools. They fall into these groups:
 
 - **Apps and machine** — open/quit apps, installed apps, focus presets, CPU/memory/disk/battery,
-  volume, appearance, lock, display sleep.
+  the apps using the most memory, volume, appearance, lock, display sleep.
 - **Music** — Spotify history and taste, now playing, name→URI lookup, play one or many tracks,
   pause/skip/previous, Apple Music controls, a local queue the watcher advances.
 - **Web and research** — ranked search, multi-angle research dossiers, page reading, news, and
@@ -212,7 +227,8 @@ The registry has 58 tools. They fall into these groups:
   headings/forms/tables, click, scroll, fill, press, submit (approval-gated), back and forward.
 - **Local knowledge** — Firefox/Chrome/Safari history search, optional read-only SQLite knowledge
   base, Obsidian vault search/read/write.
-- **Files and notes** — Spotlight search, open, Quick Look, markdown notes and note search.
+- **Files and notes** — Spotlight search, open, Quick Look, markdown notes, note search, and reading
+  a note back in full.
 - **Commitments** — list, add, complete and snooze the ledger; a deterministic morning brief.
 - **Desk utilities** — clipboard, timers that speak, screenshots, approval-gated shell.
 - **Meta** — `discover_tools` searches the full registry on demand; `consult_specialist` makes one
