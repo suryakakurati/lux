@@ -1,8 +1,8 @@
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { Settings } from '../../shared/types'
-import { exec } from './mac/exec'
+import { exec, findBinary, type ExecResult } from './mac/exec'
 import { expandHome } from './mac/stats'
 
 export interface TranscriptionResult {
@@ -42,25 +42,22 @@ export class Transcriber {
 
   private async detect(): Promise<EngineAvailability | null> {
     const config = this.settings()
-    if (config.sttEngine === 'cli' || config.sttEngine === 'auto' || config.sttEngine === 'mlx') {
-      if (config.sttEngine !== 'mlx' && (await this.hasBinary('whisper-cli'))) {
+    if (config.sttEngine !== 'cli' && config.sttEngine !== 'mlx') {
+      const cpp = findBinary('whisper-cli')
+      if (cpp) {
         const model = await this.findWhisperCppModel(config.sttModel)
-        if (model) return { engine: 'whisper-cli', command: 'whisper-cli', modelPath: model }
+        if (model) return { engine: 'whisper-cli', command: cpp, modelPath: model }
       }
-      if (config.sttEngine !== 'mlx' && (await this.hasBinary('whisper'))) {
-        return { engine: 'cli', command: 'whisper' }
-      }
+    }
+    if (config.sttEngine !== 'mlx') {
+      const cli = findBinary('whisper')
+      if (cli) return { engine: 'cli', command: cli }
     }
     const venvPython = join(expandHome('~/.cache/lux/stt-venv'), 'bin', 'python')
     if (await this.fileExists(venvPython)) {
       return { engine: 'mlx', command: venvPython, modelPath: join(expandHome('~/.cache/lux'), 'stt_worker.py') }
     }
     return null
-  }
-
-  private async hasBinary(name: string): Promise<boolean> {
-    const result = await exec('/usr/bin/which', [name], { timeout: 2_000 })
-    return result.code === 0 && result.stdout.trim().length > 0
   }
 
   private async fileExists(path: string): Promise<boolean> {
@@ -105,6 +102,7 @@ export class Transcriber {
           ['-m', engine.modelPath ?? '', '-f', wavPath, '-nt', '-l', 'en', '-t', '4'],
           { timeout: 90_000 }
         )
+        if (result.code !== 0) throw new Error(`whisper.cpp could not read the recording: ${failure(result)}`)
         text = result.stdout
       } else if (engine.engine === 'cli') {
         const model = (this.settings().sttModel || 'base.en').replace(/^whisper-/, '')
@@ -114,11 +112,15 @@ export class Transcriber {
           { timeout: 180_000 }
         )
         const txtPath = join(workDir, 'input.txt')
-        text = result.code === 0 ? readFileSync(txtPath, 'utf8') : result.stderr
+        if (result.code !== 0 || !existsSync(txtPath)) {
+          throw new Error(`Whisper could not read the recording: ${failure(result)}`)
+        }
+        text = readFileSync(txtPath, 'utf8')
       } else {
         const result = await exec(engine.command, [engine.modelPath ?? '', wavPath], {
           timeout: 120_000
         })
+        if (result.code !== 0) throw new Error(`whisper could not read the recording: ${failure(result)}`)
         text = result.stdout
       }
 
@@ -131,6 +133,21 @@ export class Transcriber {
       }
     }
   }
+}
+
+/**
+ * The last useful stderr lines. Whisper writes progress bars and, on failure, a
+ * traceback; without this the chat showed either a wall of text or the raw
+ * stderr — which used to be returned as if it were the person's own words.
+ */
+function failure(result: ExecResult): string {
+  if (result.timedOut) return 'the engine timed out'
+  const lines = (result.stderr || result.stdout)
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line && !line.includes('%|'))
+  const detail = lines.slice(-2).join(' ')
+  return detail.slice(0, 200) || 'the engine exited with an error'
 }
 
 const NOISE = /^\[(blank_audio|silence|music|applause|inaudible)\]$/i

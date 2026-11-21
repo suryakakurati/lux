@@ -48,11 +48,15 @@ Then choose it in Settings → Model and press **Restart** on the engine row.
 1. Microphone permission must be granted to Lux. Settings → Permissions → **Open** takes you to the
    pane. macOS only lists an app after it has asked once, so use **Allow microphone** in onboarding
    first.
-2. Lux needs a local STT engine. Install whisper.cpp with `npm run stt:setup`, or put a `whisper`
-   binary on `PATH`. Without one, voice input fails with an actionable message.
-3. If the HUD reports no audio, check the input device and mute state. A near-silent recording is
+2. Lux needs a local STT engine. Install whisper.cpp with `npm run stt:setup`, or install the
+   `whisper` CLI (`pip install openai-whisper`). Lux searches `/opt/homebrew/bin`,
+   `/usr/local/bin` and `~/.local/bin` itself, because an app opened from Finder does not inherit
+   your shell's `PATH`. If transcription still fails, the chat names the engine's actual error.
+3. The Python `whisper` CLI shells out to `ffmpeg`; Lux passes it a PATH that finds a Homebrew
+   `ffmpeg` too.
+4. If the HUD reports no audio, check the input device and mute state. A near-silent recording is
    rejected on purpose; it is not sent to Whisper.
-4. Run `LUX_AUDIT_AUDIO=1 npm run audit` to exercise recording and playback end to end.
+5. Run `LUX_AUDIT_AUDIO=1 npm run audit` to exercise recording and playback end to end.
 
 ## A turn is very slow
 
