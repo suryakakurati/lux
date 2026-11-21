@@ -4,6 +4,14 @@ All notable changes to Lux are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project follows semantic
 versioning.
 
+## [0.2.1] — 2026-11-21
+
+### Fixed
+
+- The Settings footer carried its own copy of the version number, so it could disagree with the app
+  it described. The renderer now shows the version from the bundle, and `scripts/package.sh` reads it
+  from `package.json`; a release declares its version in one place.
+
 ## [0.2.0] — 2026-11-21
 
 Voice and command accuracy. Minor version: new tools and a new speech engine, plus fixes found by
@@ -116,3 +124,4 @@ measured performance pass and a designed interface.
 
 [0.1.0]: https://github.com/suryakakurati/lux/releases/tag/v0.1.0
 [0.2.0]: https://github.com/suryakakurati/lux/releases/tag/v0.2.0
+[0.2.1]: https://github.com/suryakakurati/lux/releases/tag/v0.2.1
