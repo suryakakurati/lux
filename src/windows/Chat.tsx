@@ -60,6 +60,7 @@ const SUGGESTIONS = [
 ]
 
 export function Chat() {
+  const [version, setVersion] = useState('')
   const [items, setItems] = useState<ChatItem[]>([])
   const [conversations, setConversations] = useState<ConversationSummary[]>([])
   const [activeId, setActiveId] = useState('')
@@ -103,6 +104,7 @@ export function Chat() {
 
     void window.lux.bootstrap().then((data) => {
       if (!alive) return
+      setVersion(data.version)
       setItems(data.items)
       setConversations(data.conversations)
       setActiveId(data.activeConversationId)
@@ -273,7 +275,7 @@ export function Chat() {
       <aside className="sidebar" aria-label="Conversations">
         <div className="sidebar-brand">
           <span className="brand-name">Lux</span>
-          <span className="brand-version">0.1</span>
+          <span className="brand-version">{version}</span>
         </div>
 
         <button
@@ -528,6 +530,7 @@ export function Chat() {
         <>
           <div className="scrim" onClick={() => setSettingsOpen(false)} aria-hidden="true" />
           <SettingsPanel
+            version={version}
             settings={settings}
             permissions={permissions}
             engine={engine}
@@ -799,6 +802,7 @@ function EmptyState({
 }
 
 function SettingsPanel({
+  version,
   settings,
   permissions,
   engine,
@@ -806,6 +810,7 @@ function SettingsPanel({
   onClose,
   onSaved
 }: {
+  version: string
   settings: Settings
   permissions: PermissionsStatus | null
   engine: EngineStatus | null
@@ -1198,7 +1203,7 @@ function SettingsPanel({
         </section>
 
         <footer className="settings-foot">
-          <span>Lux 0.2.0</span>
+          <span>Lux {version}</span>
           <span>{settings.sttEngine} speech recognition</span>
         </footer>
       </div>

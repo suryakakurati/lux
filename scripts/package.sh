@@ -29,7 +29,8 @@ done
 sips -z 1024 1024 resources/app-icon.png --out "$ICONSET/icon_512x512@2x.png" >/dev/null
 iconutil -c icns "$ICONSET" -o resources/Lux.icns
 
-echo "==> Packaging Lux.app"
+VERSION=$(node -p "require('./package.json').version")
+echo "==> Packaging Lux.app $VERSION"
 rm -rf release
 npx @electron/packager . Lux \
   --platform=darwin \
@@ -37,7 +38,7 @@ npx @electron/packager . Lux \
   --out=release \
   --overwrite \
   --app-bundle-id=com.lux.assistant \
-  --app-version=0.2.0 \
+  --app-version="$VERSION" \
   --icon=resources/Lux.icns \
   --extend-info=resources/info.plist \
   --extra-resource=resources/bin \

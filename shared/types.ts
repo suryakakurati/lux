@@ -147,6 +147,7 @@ export type LuxEvent =
   | { kind: 'engine'; status: EngineStatus }
 
 export interface Bootstrap {
+  version: string
   items: ChatItem[]
   settings: Settings
   stats: SystemStats
@@ -168,6 +169,7 @@ export interface ConversationSummary {
 export interface LuxBridge {
   onEvent(handler: (event: LuxEvent) => void): () => void
   bootstrap(): Promise<Bootstrap>
+  appVersion(): Promise<string>
   send(text: string): Promise<void>
   cancel(): Promise<void>
   newConversation(): Promise<void>

@@ -3,6 +3,7 @@ import type { PermissionsStatus } from '../../shared/types'
 import '../styles/welcome.css'
 
 export function Welcome() {
+  const [version, setVersion] = useState('')
   const [permissions, setPermissions] = useState<PermissionsStatus | null>(null)
   const [microphoneAsked, setMicrophoneAsked] = useState(false)
 
@@ -11,6 +12,7 @@ export function Welcome() {
   }
 
   useEffect(() => {
+    void window.lux.appVersion().then(setVersion)
     refresh()
     const unsubscribe = window.lux.onEvent((event) => {
       if (event.kind === 'permissions') setPermissions(event.permissions)
@@ -26,7 +28,7 @@ export function Welcome() {
     <div className="welcome">
       <header className="welcome-head">
         <span className="welcome-mark">Lux</span>
-        <span className="welcome-version">0.1</span>
+        <span className="welcome-version">{version}</span>
         <span className="welcome-kicker">Private, local, on this Mac</span>
       </header>
 

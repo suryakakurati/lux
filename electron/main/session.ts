@@ -112,7 +112,7 @@ export class Session {
 
   // ---------------------------------------------------------------- lifecycle
 
-  bootstrap(): Omit<Bootstrap, 'engine'> {
+  bootstrap(): Omit<Bootstrap, 'engine' | 'version'> {
     return {
       items: this.items,
       settings: this.deps.settings(),

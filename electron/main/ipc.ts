@@ -63,6 +63,7 @@ export function registerIpc(deps: IpcDeps): void {
     const engine = deps.engine.current()
     return {
       ...base,
+      version: app.getVersion(),
       settings: getSettings(),
       permissions,
       ollamaReachable: reachable || engine.reachable,
@@ -121,6 +122,8 @@ export function registerIpc(deps: IpcDeps): void {
   ipcMain.handle('lux:engine:status', () => deps.engine.current())
 
   ipcMain.handle('lux:engine:recover', async () => deps.engine.ensure('manual'))
+
+  ipcMain.handle('lux:version', () => app.getVersion())
 
   ipcMain.handle('lux:conversations', () => session.summaries())
 

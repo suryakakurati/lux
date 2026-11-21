@@ -9,6 +9,7 @@ const bridge: LuxBridge = {
   },
 
   bootstrap: () => ipcRenderer.invoke('lux:bootstrap'),
+  appVersion: () => ipcRenderer.invoke('lux:version'),
   send: (text: string) => ipcRenderer.invoke('lux:send', text),
   cancel: () => ipcRenderer.invoke('lux:cancel'),
   newConversation: () => ipcRenderer.invoke('lux:new-conversation'),
