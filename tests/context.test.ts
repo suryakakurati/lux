@@ -43,6 +43,6 @@ test('a conversation inside the budget is returned unchanged', () => {
 
 test('the budget leaves output room inside the configured context', () => {
   const budget = contextBudgetChars(8_192, 1_536)
-  assert.equal(budget, 19_968)
+  assert.equal(budget, 17_305)
   assert.ok(contextBudgetChars(2_048, 1_536) >= 6_000)
 })

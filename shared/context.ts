@@ -96,7 +96,7 @@ export function fitContext<T extends ContextMessage>(messages: T[], budgetChars:
 /** Characters available for the prompt, leaving room for the answer. */
 export function contextBudgetChars(contextWindow: number, maxOutputTokens: number): number {
   const promptTokens = Math.max(1_024, contextWindow - maxOutputTokens)
-  // About three characters per token for this tokenizer, with a floor for a
-  // deliberately small context window.
-  return Math.max(6_000, Math.floor(promptTokens * 3))
+  // Around 2.6 characters per token for this tokenizer once tool schemas are
+  // included, with a floor for a deliberately small context window.
+  return Math.max(6_000, Math.floor(promptTokens * 2.6))
 }

@@ -63,6 +63,8 @@ export interface AgentInput {
   sampling?: SamplingOptions
   /** Research may legitimately take longer than a spoken question. */
   timeBudgetMs?: number
+  /** Hard ceiling on model rounds; the last round is reserved for an answer. */
+  maxRounds?: number
   emit: (event: AgentEvent) => void
 }
 
@@ -200,6 +202,13 @@ export async function runAgent(input: AgentInput): Promise<AgentOutcome> {
   )
   const timeBudgetMs =
     input.timeBudgetMs ?? (researchPlan ? RESEARCH_TIME_BUDGET_MS : TIME_BUDGET_MS)
+  // Research still gets a smaller ceiling than an ordinary turn. The last
+  // round deliberately closes the toolbox so a model that keeps searching is
+  // forced to answer from what it already read.
+  const roundLimit = Math.max(
+    1,
+    Math.min(input.maxRounds ?? (researchPlan ? 8 : MAX_TOOL_ROUNDS), MAX_TOOL_ROUNDS)
+  )
   let replanned = false
   let toolUnavailable = false
   let planNudges = 0
@@ -220,9 +229,10 @@ export async function runAgent(input: AgentInput): Promise<AgentOutcome> {
   )
 
   try {
-    for (let round = 0; round <= MAX_TOOL_ROUNDS; round += 1) {
+    for (let round = 0; round < roundLimit; round += 1) {
       throwIfAborted(input.signal)
       rounds = round
+      const finalRound = round === roundLimit - 1
 
       if (Date.now() - startedAt > timeBudgetMs) {
         incomplete = true
@@ -248,6 +258,13 @@ export async function runAgent(input: AgentInput): Promise<AgentOutcome> {
         numCtx: input.settings.contextWindow || 8_192,
         numPredict: input.settings.maxOutputTokens || 1_536
       }
+      if (finalRound && !answerOnly) {
+        const urls = evidence.urls.slice(0, 8).join('\n')
+        messages.push({
+          role: 'system',
+          content: `Final round: tools are closed. Answer now from the evidence already gathered. Cite these exact URLs where they support the answer, and do not invent one:${urls ? `\n${urls}` : ' (no source URLs were found; say so if citations are required).'}`
+        })
+      }
       const modelStartedAt = Date.now()
       // A fresh view each round: the transcript keeps everything for the task
       // state, but the model only receives what fits next to its answer.
@@ -256,7 +273,7 @@ export async function runAgent(input: AgentInput): Promise<AgentOutcome> {
         url: input.settings.ollamaUrl,
         model: input.settings.model,
         messages: requestMessages,
-        tools: offered,
+        tools: finalRound ? [] : offered,
         keepAlive: modelOptions.keepAlive,
         numCtx: modelOptions.numCtx,
         numPredict: modelOptions.numPredict,
@@ -299,7 +316,7 @@ export async function runAgent(input: AgentInput): Promise<AgentOutcome> {
       // is a habit, not information: asking for the direct answer is cheaper
       // and more correct than executing a timer lookup for "what time is it".
       if (answerOnly && calls.length > 0) {
-        if (answerOnlyNudges < 1 && round < MAX_TOOL_ROUNDS) {
+        if (answerOnlyNudges < 1 && round < roundLimit - 1) {
           answerOnlyNudges += 1
           trace.nudge(`answer-only: ignored ${calls[0].name}`)
           task?.note(`answered from context; ignored an unnecessary ${calls[0].name} call`)
@@ -323,7 +340,7 @@ export async function runAgent(input: AgentInput): Promise<AgentOutcome> {
         // A mandatory plan step that is still open is one more action, not a
         // new request. Nudge once; a genuine blocker still gets to end the turn.
         const open = plan.allowQuestion ? [] : openRequiredSteps(plan, evidence)
-        if (open.length > 0 && planNudges < 1 && round < MAX_TOOL_ROUNDS) {
+        if (open.length > 0 && planNudges < 1 && round < roundLimit - 1) {
           planNudges += 1
           const step = open[0]
           trace.nudge(`plan open: ${step.title}`)
@@ -339,7 +356,7 @@ export async function runAgent(input: AgentInput): Promise<AgentOutcome> {
         // A citation is a URL that was actually in the evidence. Asking once
         // for the missing URLs is cheaper and more reliable than a rewrite.
         const gap = answerGap(plan, reply, evidence)
-        if (gap && citationNudges < 2 && round < MAX_TOOL_ROUNDS) {
+        if (gap && citationNudges < 2 && round < roundLimit - 1) {
           citationNudges += 1
           trace.nudge(`citations: ${gap}`)
           task?.note(`answer not yet citable: ${gap}`)
@@ -353,7 +370,7 @@ export async function runAgent(input: AgentInput): Promise<AgentOutcome> {
 
         const stall = stallReason(reply, { usedTools: hadTools, actionable, toolUnavailable })
 
-        if (stall && nudges < MAX_NUDGES && round < MAX_TOOL_ROUNDS) {
+        if (stall && nudges < MAX_NUDGES && round < roundLimit - 1) {
           nudges += 1
           trace.nudge(stall)
           task?.note(`model stalled (${stall}); nudging it to continue`)
@@ -481,12 +498,20 @@ export async function runAgent(input: AgentInput): Promise<AgentOutcome> {
         else messages.push({ role: 'system', content })
       }
 
-      // Re-state the compact task state after a batch. This is deliberately
-      // small: it keeps the plan, URLs and failures available without replaying
-      // every page into the context window.
-      if (task) messages.push({ role: 'system', content: task.prompt(true) })
+      // Re-state the compact task state after a batch. Replace the previous
+      // copy instead of appending one per round; a long turn otherwise spends
+      // its context on fourteen overlapping summaries of itself.
+      if (task) {
+        const content = task.prompt(true)
+        const existing = messages.findIndex(
+          (message, index) =>
+            index > 0 && message.role === 'system' && message.content.startsWith('Task state')
+        )
+        if (existing >= 0) messages[existing] = { role: 'system', content }
+        else messages.push({ role: 'system', content })
+      }
 
-      if (round === MAX_TOOL_ROUNDS) {
+      if (finalRound) {
         incomplete = true
         finalText = `I used this turn's steps before finishing${lastSummary ? ` (last: ${lastSummary})` : ''}. Say continue and I'll pick it up from there.`
         trace.stop('tool round limit')

@@ -424,6 +424,7 @@ async function runTask(
       taskState,
       sampling: SAMPLING,
       timeBudgetMs: AGENT_BUDGET_MS[task.category],
+      maxRounds: task.maxRounds,
       signal: controller.signal,
       emit: (event: AgentEvent) => {
         if (event.type === 'token' && firstTokenAt === undefined) firstTokenAt = Date.now()
