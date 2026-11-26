@@ -15,7 +15,7 @@ Electron main
   ├── Session ────────────── conversation state, turn pipeline, commitments, brief delivery
   ├── EngineSupervisor ───── starts and watches Ollama, publishes engine state
   ├── Agent loop ─────────── planner, shortlist, stream, tools, verification
-  ├── Tool registry ──────── validation, approval, timeout, 57 tools
+  ├── Tool registry ──────── validation, approval, timeout, 58 tools
   ├── Background jobs ────── detached work with progress and cancellation
   ├── Memory ─────────────── lexical recall by default; semantic opt-in
   └── STT ────────────────── whisper-cli → whisper → mlx

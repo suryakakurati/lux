@@ -22,6 +22,9 @@ resources/bin/
 resources/app-icon.png
 resources/Lux.icns
 
+# Agent working notes (deliberately not committed)
+.agent/
+
 # Editor and OS state
 .vscode/
 .idea/

@@ -53,10 +53,10 @@ export const fileTools: ToolDef[] = [
       },
       required: ['query']
     },
-    async run(args) {
+    async run(args, context) {
       const query = String(args.query ?? '').trim().replace(/["\\]/g, '')
       const limit = Math.min(20, Math.max(1, Number(args.limit ?? 8)))
-      const result = await exec('/usr/bin/mdfind', ['-name', query], { timeout: 6_000 })
+      const result = await exec('/usr/bin/mdfind', ['-name', query], { timeout: 6_000, signal: context.signal })
       const files = result.stdout
         .split('\n')
         .map((line) => line.trim())
@@ -90,12 +90,12 @@ export const fileTools: ToolDef[] = [
       },
       required: ['path']
     },
-    async run(args) {
+    async run(args, context) {
       const path = expandHome(String(args.path ?? '').trim())
       if (!existsSync(path)) {
         return { content: `There is no file at ${path}.`, summary: 'missing path' }
       }
-      const result = await exec('/usr/bin/open', [path], { timeout: 6_000 })
+      const result = await exec('/usr/bin/open', [path], { timeout: 6_000, signal: context.signal })
       if (result.code !== 0) {
         return { content: `Could not open ${path}: ${truncate(result.stderr, 160)}`, summary: 'open failed' }
       }
@@ -113,10 +113,10 @@ export const fileTools: ToolDef[] = [
       },
       required: ['path']
     },
-    async run(args) {
+    async run(args, context) {
       const path = expandHome(String(args.path ?? '').trim())
       if (!existsSync(path)) return { content: `No file at ${path}.`, summary: 'missing path' }
-      const result = await exec('/usr/bin/qlmanage', ['-p', path], { timeout: 5_000 })
+      const result = await exec('/usr/bin/qlmanage', ['-p', path], { timeout: 5_000, signal: context.signal })
       if (result.code !== 0) {
         return { content: `Quick Look failed: ${truncate(result.stderr, 160)}`, summary: 'preview failed' }
       }

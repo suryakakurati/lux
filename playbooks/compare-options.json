@@ -10,7 +10,8 @@
       "title": "Collect evidence on each option",
       "kind": "gather",
       "tool": "research",
-      "accept": ["research", "web_search"]
+      "accept": ["research", "web_search"],
+      "requiresEvidence": true
     },
     {
       "title": "Check the deciding claim in the strongest source",

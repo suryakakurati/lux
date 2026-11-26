@@ -48,14 +48,14 @@ export const webTools: ToolDef[] = [
       },
       required: ['action']
     },
-    async run(args) {
+    async run(args, context) {
       const app = String(args.app ?? 'default').toLowerCase()
       if (args.action === 'search') {
         const query = String(args.query ?? '').trim()
         if (!query) return { content: 'Give me a search query.', summary: 'empty search' }
         const engine = String(args.engine ?? 'google').toLowerCase()
         const build = ENGINES[engine] ?? ENGINES.google
-        const opened = await openInBrowser(build(query), app)
+        const opened = await openInBrowser(build(query), app, context.signal)
         if (!opened.ok) {
           return { content: `Could not open the browser: ${opened.detail}`, summary: 'search failed' }
         }
@@ -67,8 +67,15 @@ export const webTools: ToolDef[] = [
 
       const raw = String(args.url ?? '').trim()
       if (!raw) return { content: 'Give me a URL to open.', summary: 'missing url' }
-      const url = /^[a-z]+:\/\//i.test(raw) ? raw : `https://${raw}`
-      const opened = await openInBrowser(url, app)
+      const url = openableUrl(raw)
+      if (!url) {
+        return {
+          content: 'I can open http, https and mailto links. That address uses another scheme, so I did not hand it to the browser.',
+          summary: 'blocked url scheme',
+          fail: 'invalid_args'
+        }
+      }
+      const opened = await openInBrowser(url, app, context.signal)
       if (!opened.ok) {
         return { content: `Could not open ${url}: ${opened.detail}`, summary: 'open failed' }
       }
@@ -133,21 +140,34 @@ export const webTools: ToolDef[] = [
  * wrong app is better than doing nothing visible, but the reply says which one
  * actually opened.
  */
+/** A URL the person's browser may be handed: web pages and mail, nothing local. */
+export function openableUrl(raw: string): string | null {
+  const withScheme = /^[a-z][a-z0-9+.-]*:/i.test(raw) ? raw : `https://${raw}`
+  try {
+    const url = new URL(withScheme)
+    if (url.protocol !== 'http:' && url.protocol !== 'https:' && url.protocol !== 'mailto:') return null
+    return url.toString()
+  } catch {
+    return null
+  }
+}
+
 async function openInBrowser(
   url: string,
-  app: string
+  app: string,
+  signal?: AbortSignal
 ): Promise<{ ok: boolean; detail: string; browser: string }> {
   const named = BROWSERS[app] ?? ''
   if (!named) {
-    const result = await exec('/usr/bin/open', [url], { timeout: 6_000 })
+    const result = await exec('/usr/bin/open', [url], { timeout: 6_000, signal })
     if (result.code !== 0) return { ok: false, detail: truncate(result.stderr, 160), browser: 'default browser' }
     return { ok: true, detail: '', browser: 'the default browser' }
   }
 
-  const direct = await exec('/usr/bin/open', ['-a', named, url], { timeout: 8_000 })
+  const direct = await exec('/usr/bin/open', ['-a', named, url], { timeout: 8_000, signal })
   if (direct.code === 0) return { ok: true, detail: '', browser: named }
 
-  const fallback = await exec('/usr/bin/open', [url], { timeout: 6_000 })
+  const fallback = await exec('/usr/bin/open', [url], { timeout: 6_000, signal })
   if (fallback.code === 0) {
     return { ok: true, detail: '', browser: `the default browser (${named} could not be opened)` }
   }

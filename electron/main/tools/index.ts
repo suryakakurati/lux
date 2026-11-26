@@ -17,7 +17,7 @@ import { specialistTools } from './specialist'
 import { systemTools } from './system'
 import { vaultTools } from './vault'
 import { webTools } from './web'
-import type { ToolCallOutcome, ToolContext, ToolDef } from './types'
+import type { ToolCallOutcome, ToolContext, ToolDef, ToolErrorKind } from './types'
 import { toOllamaTools } from './types'
 
 /** One tool cannot hold the whole turn hostage. Individual tools may lower this. */
@@ -154,11 +154,23 @@ export async function executeTool(
     }
   }
 
+  // A timeout must stop the work, not just stop waiting for it. The controller
+  // is chained to the turn's signal, so cancelling a turn also kills the command
+  // that turn started.
+  const controller = new AbortController()
+  const parent = context.signal
+  const forwardAbort = (): void => controller.abort()
+  if (parent) {
+    if (parent.aborted) controller.abort()
+    else parent.addEventListener('abort', forwardAbort, { once: true })
+  }
+  const scoped: ToolContext = { ...context, signal: controller.signal }
+  const limited = tool.timeoutMs ?? DEFAULT_TOOL_TIMEOUT_MS
+  let timer: NodeJS.Timeout | undefined
+
   try {
-    const limited = tool.timeoutMs ?? DEFAULT_TOOL_TIMEOUT_MS
-    let timer: NodeJS.Timeout | undefined
     const raced = await Promise.race([
-      tool.run(validation.args, context).then(
+      tool.run(validation.args, scoped).then(
         (value) => ({ kind: 'value' as const, value }),
         (error) => ({ kind: 'error' as const, error })
       ),
@@ -170,10 +182,11 @@ export async function executeTool(
     if (timer) clearTimeout(timer)
 
     if (raced.kind === 'timeout') {
+      controller.abort()
       return {
         ...failureEnvelope(
           'timeout',
-          `${name} did not finish within ${Math.round(limited / 1000)}s, so it was abandoned.`,
+          `${name} did not finish within ${Math.round(limited / 1000)}s, so it was stopped.`,
           'Do not repeat it blindly. Try a smaller request or a different tool, and say which step stalled.'
         ),
         summary: `${name} timed out`,
@@ -183,6 +196,23 @@ export async function executeTool(
     if (raced.kind === 'error') throw raced.error
 
     const result = raced.value
+    // A tool can refuse without throwing (a blocklisted command, a missing
+    // argument). That is not evidence the action happened.
+    if (result.fail) {
+      const hints: Record<ToolErrorKind, string> = {
+        unknown_tool: 'Call discover_tools, then the matching tool.',
+        invalid_args: 'Correct the arguments to match the schema, then call it once more.',
+        denied: 'Do not retry. Ask what they would prefer instead.',
+        timeout: 'Do not repeat it blindly. Try a smaller request and name which step stalled.',
+        failed: 'Report the failure plainly. Do not claim the action succeeded.'
+      }
+      return {
+        ...failureEnvelope(result.fail, result.content, hints[result.fail]),
+        denied: result.fail === 'denied',
+        summary: result.summary,
+        durationMs: Date.now() - started
+      }
+    }
     return {
       ...successEnvelope(result.content),
       summary: result.summary,
@@ -200,5 +230,7 @@ export async function executeTool(
       summary: `${name} failed`,
       durationMs: Date.now() - started
     }
+  } finally {
+    if (parent) parent.removeEventListener('abort', forwardAbort)
   }
 }

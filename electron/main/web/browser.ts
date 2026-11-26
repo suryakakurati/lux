@@ -1,5 +1,6 @@
 import { BrowserWindow } from 'electron'
 import { logLine } from '../log'
+import { assertPublicUrl, isBlockedTarget } from './read.ts'
 
 let webWindow: BrowserWindow | null = null
 
@@ -168,10 +169,31 @@ function ensureWebWindow(show: boolean): BrowserWindow {
     }
   })
 
-  // New tabs load in place: the agent works one page at a time.
+  // New tabs load in place: the agent works one page at a time. A window opened
+  // by a page must obey the same host rule as a direct navigation.
   win.webContents.setWindowOpenHandler(({ url }) => {
-    if (/^https?:/i.test(url)) void win.loadURL(url)
+    if (isBlockedTarget(url)) {
+      logLine('web', `blocked window-open to a local target: ${url.slice(0, 160)}`)
+    } else {
+      void win.loadURL(url)
+    }
     return { action: 'deny' }
+  })
+
+  // The browser is the agent's, so a model-chosen link or redirect must not land
+  // on loopback, a router page or another local service. These hooks answer
+  // synchronously, so they judge the URL as written; `openWeb` resolves the
+  // hostname first, and `snapshotPage` refuses to return a blocked page that
+  // reached the window by another path.
+  win.webContents.on('will-navigate', (event, url) => {
+    if (!isBlockedTarget(url)) return
+    event.preventDefault()
+    logLine('web', `blocked navigation to a local target: ${url.slice(0, 160)}`)
+  })
+  win.webContents.on('will-redirect', (event, url) => {
+    if (!isBlockedTarget(url)) return
+    event.preventDefault()
+    logLine('web', `blocked redirect to a local target: ${url.slice(0, 160)}`)
   })
 
   // Failures inside the page are the most common reason a tool "did nothing";
@@ -197,6 +219,15 @@ export async function snapshotPage(includeStructure = false, waitForLoad = true)
     throw new Error('no browser window is open; call browser_open first')
   }
   if (waitForLoad) await whenLoaded(webWindow)
+  const current = webWindow.webContents.getURL()
+  // A page can reach a local address through a path the navigation hooks did
+  // not see (a service worker, an in-page rewrite). Its text is never returned.
+  if (current && !current.startsWith('about:') && isBlockedTarget(current)) {
+    webWindow.webContents.stop()
+    throw new Error(
+      'Lux’s browser is on a local address, which it does not read. Use the person’s own browser for localhost pages.'
+    )
+  }
   const raw = (await webWindow.webContents.executeJavaScript(snapshotScript(includeStructure), true)) as PageSnapshot
   return {
     ...raw,
@@ -211,6 +242,10 @@ export async function snapshotPage(includeStructure = false, waitForLoad = true)
 }
 
 export async function openWeb(url: string, show = false): Promise<PageSnapshot> {
+  // DNS is checked here rather than in the event handlers, which must answer
+  // synchronously. A name that resolves to loopback is refused before it loads.
+  const target = (await assertPublicUrl(url)).toString()
+  url = target
   logLine('web', `open ${url} show=${show}`)
   const win = ensureWebWindow(show)
   // Re-reading the page the agent is already on should not reload it (and

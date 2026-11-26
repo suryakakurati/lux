@@ -15,6 +15,8 @@ export interface ToolContext {
   settings: import('../../../shared/types').Settings
   /** Present in the app; omitted by isolated audit/smoke harnesses. */
   models?: import('../agent/model-manager').ModelManager
+  /** The turn's signal. A cancelled turn or a tool timeout aborts the work. */
+  signal?: AbortSignal
 }
 
 export interface ToolResult {
@@ -24,6 +26,12 @@ export interface ToolResult {
   summary: string
   /** Force the chat window open when this result deserves reading. */
   openChat?: boolean
+  /**
+   * A non-ok result produced without throwing. A refused or invalid request is
+   * not evidence that the action happened, so the loop must not see `ok: true`
+   * for it; the envelope is built from this kind instead.
+   */
+  fail?: ToolErrorKind
 }
 
 export interface ToolDef {

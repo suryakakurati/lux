@@ -425,11 +425,11 @@ export const browseTools: ToolDef[] = [
       },
       required: ['url']
     },
-    async run(args) {
+    async run(args, context) {
       const url = normalizeUrl(String(args.url ?? ''))
       if (!url) return { content: 'That is not a URL I can read.', summary: 'bad url' }
       try {
-        const page = await readPublicPage(url, args.fresh === true)
+        const page = await readPublicPage(url, args.fresh === true, context.signal)
         const header = `${page.title || '(untitled)'} — ${page.url}`
         const freshness = page.cached
           ? `Cached at ${new Date(page.fetchedAt ?? Date.now()).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}; pass fresh=true if you need a new read.`

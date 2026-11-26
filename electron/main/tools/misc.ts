@@ -108,12 +108,12 @@ export const miscTools: ToolDef[] = [
       },
       required: ['mode']
     },
-    async run(args) {
+    async run(args, context) {
       const dir = join(homedir(), 'Pictures', 'Lux')
       mkdirSync(dir, { recursive: true })
       const file = join(dir, `Lux ${new Date().toISOString().replace(/[:.]/g, '-')}.png`)
       const flags = args.mode === 'selection' ? ['-i', '-s', file] : ['-x', file]
-      const result = await exec('/usr/sbin/screencapture', flags, { timeout: 30_000 })
+      const result = await exec('/usr/sbin/screencapture', flags, { timeout: 30_000, signal: context.signal })
       if (result.code !== 0) {
         return {
           content: `Screenshot failed: ${truncate(result.stderr, 200)}`,
@@ -136,18 +136,22 @@ export const miscTools: ToolDef[] = [
       },
       required: ['command']
     },
-    async run(args) {
+    async run(args, context) {
       const command = String(args.command ?? '').trim()
       const reason = String(args.reason ?? '').trim()
-      if (!command) return { content: 'No command given.', summary: 'empty command' }
+      if (!command) {
+        return { content: 'No command was given.', summary: 'empty command', fail: 'invalid_args' }
+      }
       const blocked = BLOCKED.find((pattern) => pattern.test(command))
       if (blocked) {
+        // Not `ok`: the loop must not read a refusal as evidence that it ran.
         return {
           content: `Refused: that command matches a destructive pattern (${String(blocked)}).`,
-          summary: 'shell blocked'
+          summary: 'shell blocked',
+          fail: 'denied'
         }
       }
-      const result = await exec('/bin/zsh', ['-lc', command], { timeout: 20_000 })
+      const result = await exec('/bin/zsh', ['-lc', command], { timeout: 20_000, signal: context.signal })
       const output = [result.stdout, result.stderr].filter(Boolean).join('\n').trim()
       return {
         content: `$ ${command}\n${truncate(output || '(no output)', 4_000)}${reason ? `\n\n(run because: ${reason})` : ''}`,

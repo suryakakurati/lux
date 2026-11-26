@@ -297,6 +297,8 @@ export class Session {
     const toolContext: ToolContext = {
       settings,
       commitments: this.deps.commitments,
+      // Cancelling the turn now also stops the command it started.
+      signal: this.controller?.signal,
       confirm: (request) => this.requestConfirmation(request),
       models: this.deps.models,
       notify: (title, body) => this.deps.notify(title, body),
@@ -649,7 +651,9 @@ export class Session {
       settings.contextWindow || 24_576,
       settings.maxOutputTokens || 4_096
     )
-    const budget = Math.min(28_000, Math.max(8_000, Math.round(promptChars * 0.45)))
+    // The floor must never exceed the window itself: at a 2K context an 8,000
+    // character floor spent a whole turn on history.
+    const budget = Math.min(promptChars, Math.max(2_000, Math.round(promptChars * 0.45)))
     const messages: OllamaMessage[] = []
     let chars = 0
     for (const item of this.items.slice(-48)) {

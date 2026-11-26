@@ -34,9 +34,9 @@ hold right ⌥  ──▶  speak  ──▶  release  ──▶  transcribe  ─
 
 ## Status
 
-Version 0.2.1. macOS 13+ on Apple silicon; developed and measured on an M4 MacBook Air with 16 GB.
-The app is single-user and developer-signed. It is usable every day, but packaging is still
-developer-grade (no installer, ad-hoc signing).
+Version 0.2.2; 0.3.0 is in development. macOS 13+ on Apple silicon; developed and measured on an M4
+MacBook Air with 16 GB. The app is single-user and developer-signed. It is usable every day, but
+packaging is still developer-grade (no installer, ad-hoc signing).
 
 ## What 0.2 adds
 
@@ -113,7 +113,7 @@ npm run dev
 | `npm run lint` | ESLint over TypeScript, TSX and scripts |
 | `npm run format` | Prettier write |
 | `npm test` | Unit tests; no network, model or macOS permissions |
-| `npm run check` | typecheck → lint → test |
+| `npm run check` | typecheck → lint → test → evals |
 | `npm run evals` | 30 deterministic agent cases |
 | `npm run bench` | 20 real-model turns; writes `docs/benchmarks/latest.json` |
 | `npm run bench:baseline` | Three clean-tree runs; refuses a dirty worktree |
