@@ -39,10 +39,10 @@ testing every command type against the real model.
 - A stored 1,536-token output cap migrates to the 4,096 default.
 - The capability audit no longer checks a tool that does not exist (`list_timers`).
 
-## [Unreleased]
+## [0.2.2] — 2026-11-26
 
-Work on 0.3.0. The release gate is restored first: `npm test` runs on every supported Node major,
-`npm run check` now includes the evals, and CI exercises both.
+Patch release with the fixes from the 0.3 audit. The release gate is restored first: `npm test` runs
+on every supported Node major, `npm run check` now includes the evals, and CI exercises both.
 
 ### Added
 
@@ -164,3 +164,4 @@ measured performance pass and a designed interface.
 [0.1.0]: https://github.com/suryakakurati/lux/releases/tag/v0.1.0
 [0.2.0]: https://github.com/suryakakurati/lux/releases/tag/v0.2.0
 [0.2.1]: https://github.com/suryakakurati/lux/releases/tag/v0.2.1
+[0.2.2]: https://github.com/suryakakurati/lux/releases/tag/v0.2.2

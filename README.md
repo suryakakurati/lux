@@ -34,7 +34,7 @@ hold right ⌥  ──▶  speak  ──▶  release  ──▶  transcribe  ─
 
 ## Status
 
-Version 0.2.1; 0.3.0 is in development. macOS 13+ on Apple silicon; developed and measured on an M4
+Version 0.2.2; 0.3.0 is in development. macOS 13+ on Apple silicon; developed and measured on an M4
 MacBook Air with 16 GB. The app is single-user and developer-signed. It is usable every day, but
 packaging is still developer-grade (no installer, ad-hoc signing).
 

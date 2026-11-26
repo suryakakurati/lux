@@ -1,16 +1,16 @@
 # Lux 0.3.0 — audit and test report
 
-**Commit:** `43e9ca2` (equal to `main`) · **Package version:** 0.2.1 · **Date:** 2026-11-26
+**Commit audited:** `43e9ca2` (equal to `main` at the time) · **Fixed in:** 0.2.2 · **Date:** 2026-11-26
 **Environment:** Linux x64 container, Node 24.22.1, npm 11.19.1. The app targets macOS 13+ on Apple
 silicon, so the Electron GUI, Ollama, `say`, `whisper` and AppleScript were **not available**.
 
 This report is ordered by what should be done first. Each item says how necessary it is, the
 evidence, and the smallest acceptable fix.
 
-> **Status: P0 and P1 are fixed in this branch.** The findings below are kept as the record of what
-> was wrong and why. Verification at the end of the work: typecheck, lint, 170/170 unit tests,
-> 30/30 evals, build, and 9/10 long scenarios (the tenth is an S1 harness assertion that exposed a
-> real playbook gap, now fixed — see P1-8).
+> **Status: P0 and P1 are fixed and released in 0.2.2.** The findings below are kept as the record
+> of what was wrong and why. Verification at the end of the work: typecheck, lint, 172/172 unit
+> tests, 30/30 evals, build, and 10/10 long scenarios (the last one exposed a real playbook gap
+> before it was fixed — see P1-8).
 
 ---
 
