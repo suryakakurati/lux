@@ -219,8 +219,3 @@ export function registerIpc(deps: IpcDeps): void {
   ipcMain.on('lux:app:quit', () => app.quit())
 }
 
-/** The HUD stops its own recording loop when the window is hidden unexpectedly. */
-export function silenceHud(): void {
-  const win = getChatWindow()
-  if (win && !win.isDestroyed()) win.webContents.send('lux:event', { kind: 'hud', state: 'idle' })
-}

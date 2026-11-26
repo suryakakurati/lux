@@ -32,6 +32,15 @@ const STOP = new Set([
   'find', 'get', 'tell', 'show', 'check', 'look', 'see', 'give', 'know', 'let'
 ])
 
+/**
+ * Recency words retrieve a category, not a capability. "find my latest
+ * screenshot" was spending its last slots on research because "latest" was
+ * heard before "screenshot"; these words now wait until the nouns are placed.
+ */
+const QUALIFIER = new Set([
+  'latest', 'recent', 'new', 'news', 'current', 'today', 'release', 'changelog', 'updates', 'happening'
+])
+
 /** Always offered: the tools that answer "what is going on" cheaply. */
 const CORE = ['open_app', 'system_status', 'clipboard_read', 'discover_tools']
 
@@ -152,7 +161,8 @@ const ALIASES: Record<string, string[]> = {
   clipboard: ['clipboard_read', 'clipboard_write'],
   shell: ['run_shell'],
   command: ['run_shell'],
-  screenshot: ['take_screenshot'],
+  // "find my latest screenshot" wants the file, not a new capture.
+  screenshot: ['take_screenshot', 'find_files', 'quick_look'],
   jobs: ['job'],
   background: ['job'],
   playbooks: ['list_playbooks'],
@@ -160,11 +170,20 @@ const ALIASES: Record<string, string[]> = {
 }
 
 function tokens(text: string): string[] {
-  return text
+  const words = text
     .toLowerCase()
     .split(/[^a-z0-9]+/)
     .map((word) => (word.length > 4 && word.endsWith('s') ? word.slice(0, -1) : word))
     .filter((word) => word.length >= 3 && !STOP.has(word))
+  // "what am I listening to" must retrieve now_playing, whose lexicon entry is
+  // "listen". Keeping the original token and its -ing stem means both spellings
+  // work without a synonym per tense.
+  const result: string[] = []
+  for (const word of words) {
+    result.push(word)
+    if (word.length >= 6 && word.endsWith('ing')) result.push(word.slice(0, -3))
+  }
+  return result
 }
 
 interface Ranked {
@@ -224,7 +243,10 @@ export function shortlistTools(query: string, tools: ToolSchema[], limit = 12): 
     if (!CORE.includes(tool.function.name)) matched = true
   }
 
-  for (const word of words) {
+  const byCapability = [...words].sort(
+    (a, b) => Number(QUALIFIER.has(a)) - Number(QUALIFIER.has(b))
+  )
+  for (const word of byCapability) {
     for (const name of ALIASES[word] ?? []) {
       if (chosen.size >= limit) break
       add(name)

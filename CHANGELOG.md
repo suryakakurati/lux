@@ -41,8 +41,47 @@ testing every command type against the real model.
 
 ## [Unreleased]
 
+Work on 0.3.0. The release gate is restored first: `npm test` runs on every supported Node major,
+`npm run check` now includes the evals, and CI exercises both.
+
+### Added
+
+- CI on Node 22 and 24: typecheck, lint, unit tests, evals and build on every push to `main` and
+every pull request.
+- `engines.node >= 22`, so an unsupported Node version fails at install instead of at the test runner.
+
+### Changed
+
+- `npm run check` includes `npm run evals`; a red eval can no longer merge behind a green check.
+- A static facts question ("Who wrote Hamlet?") is answered directly instead of spending a research
+  round, matching how the suite already treated "the capital of France". Credit questions about a
+  song, album, film or episode still look the work up, and "who won …" always does.
+- `web_read` refuses loopback, private, link-local and `.local` hosts, checks every redirect hop and
+  refuses URLs with embedded credentials. A model-supplied URL can no longer read a local service.
+- Lux's own browser refuses the same targets: before loading, on links, on server redirects, on
+  window.open and on back/forward, and `browser_read` will not return a page that reached the window
+  by another path. The person's own browser (`browse`) still opens localhost when they ask for it.
+- `browse` only hands http, https and mailto links to the browser; another scheme is reported, not
+  opened.
+- Every tool call now has an abort signal, chained to the turn. A timeout stops the command it
+  timed out on (`exec` children included), and cancelling a turn kills its in-flight tool.
+- The packaged window's CSP no longer allows inline scripts; only the dev server relaxes it.
+
 ### Fixed
 
+- `npm test` failed on Node 24 with `MODULE_NOT_FOUND`; the runner is given the test glob instead of
+  the directory.
+- A blocklisted `run_shell` command, or an empty one, was returned as `ok: true` with "Refused: …",
+  so the loop could treat its own refusal as evidence. Those are `denied` and `invalid_args` now.
+- "What am I listening to" did not offer `now_playing` and "find my latest screenshot" did not offer
+  `find_files`; verb forms in `-ing` are stemmed and `screenshot` retrieves the file tools too.
+- Tool round counts in the turn trace were recorded as the last index rather than the number of
+  rounds.
+- Conversation history could exceed a small configured context: its floor is now bounded by the
+  window instead of a fixed 8,000 characters.
+- After a resolver reported "nothing available" every gather step became optional, which excused an
+  independent lookup; only the dependent step is excused.
+- Architecture docs listed 57 tools; the registry has 58, including `discover_tools`.
 - Lookups no longer become local file searches: generic request verbs (`find`, `get`, `show`) are
   not tool names, and an unmatched phrasing still offers research and search instead of four machine
   probes. The answer-only plan no longer hides every tool behind `discover_tools`.

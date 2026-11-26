@@ -1,0 +1,37 @@
+name: ci
+
+on:
+  # Every branch, so a pushed feature branch gets the same gate as `main`.
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: check (node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The README promises Node 22 or newer; the test runner's glob support
+        # differs across majors, so both ends of the supported range run.
+        node: [22, 24]
+    env:
+      # Nothing here needs the Electron binary; skip the ~100 MB download.
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run evals
+      - run: npm run build

@@ -10,7 +10,8 @@
       "title": "Search several angles and collect a source dossier",
       "kind": "gather",
       "tool": "research",
-      "accept": ["research", "web_search"]
+      "accept": ["research", "web_search"],
+      "requiresEvidence": true
     },
     {
       "title": "Open the strongest source if the dossier leaves a gap",

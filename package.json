@@ -6,15 +6,19 @@
   "main": "./out/main/index.js",
   "private": true,
   "type": "commonjs",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "electron-vite dev",
+    "preview:renderer": "vite --config scripts/preview/vite.config.ts",
     "build": "electron-vite build",
     "start": "npm run build && electron-vite preview",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "check": "npm run typecheck && npm run lint && npm test",
-    "test": "node --test tests/",
+    "check": "npm run typecheck && npm run lint && npm test && npm run evals",
+    "test": "node --test \"tests/**/*.test.ts\"",
     "hotkey": "bash scripts/build-hotkey.sh",
     "stt:setup": "bash scripts/setup-stt.sh",
     "voice:setup": "bash scripts/setup-voice.sh",

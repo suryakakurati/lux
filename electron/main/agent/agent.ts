@@ -322,7 +322,7 @@ export async function runAgent(input: AgentInput): Promise<AgentOutcome> {
   try {
     for (let round = 0; round < roundLimit; round += 1) {
       throwIfAborted(input.signal)
-      rounds = round
+      rounds = round + 1
       const finalRound = round === roundLimit - 1
 
       if (Date.now() - startedAt > timeBudgetMs) {
@@ -550,13 +550,16 @@ export async function runAgent(input: AgentInput): Promise<AgentOutcome> {
       // track, no site). Forcing the dependent lookup then searches for "current
       // song" and burns a minute, so let the turn answer with that fact instead.
       if (toolUnavailable) {
+        // Only the step that depended on the resolver is excused. Relaxing every
+        // gather step also excused an independent lookup that was still needed.
+        let relaxed = false
         plan = {
           ...plan,
-          steps: plan.steps.map((step) =>
-            step.kind === 'gather' || step.kind === 'act'
-              ? { ...step, optional: true, note: step.note ?? 'the resolver reported nothing available' }
-              : step
-          )
+          steps: plan.steps.map((step) => {
+            if (relaxed || step.optional || (step.kind !== 'gather' && step.kind !== 'act')) return step
+            relaxed = true
+            return {...step, optional: true, note: step.note ?? 'the resolver reported nothing available'}
+          })
         }
       }
 

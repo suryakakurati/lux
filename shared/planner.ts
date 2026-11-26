@@ -117,7 +117,20 @@ function isReading(name: string): boolean {
  * reading a track title and never opening a search.
  */
 const EXTERNAL_INFO =
-  /\b(lyrics?|translat\w*|definition|meaning|biography|discography|songwriters?|composers?|written by|directed by|release date|who (?:wrote|sang|sings|directed|composed|invented|won))\b/i
+  /\b(lyrics?|translat\w*|definition|meaning|biography|discography|songwriters?|composers?|written by|directed by|release date)\b/i
+
+/**
+ * A credit question is only a lookup when it is about a work whose credits the
+ * person cannot easily check otherwise (a song, an album, an episode). "Who
+ * wrote Hamlet?" is general knowledge, and spending a research round on it made
+ * trivia answers a minute slow while the same suite answers the capital of
+ * France directly.
+ */
+const CREDIT_LOOKUP = /\bwho (?:wrote|sang|sings|directed|composed|produced|invented)\b/i
+const CREDITED_WORK =
+  /\b(song|track|album|single|episode|film|movie|series|show|artist|band|playlist|soundtrack)\b/i
+/** A result that is current by definition always needs a check. */
+const CURRENT_RESULT = /\bwho won\b/i
 
 /** Machine reads only make sense when the request is about this Mac's state. */
 const MACHINE_READ = /^(?:battery_status|get_volume|system_status)$/
@@ -175,7 +188,11 @@ export function planForTurn(objective: string, tools: ToolSchema[], playbooks: P
 
   // A request for outside information needs a lookup even when the request also
   // matched a local resolver such as now_playing.
-  const needsResearch = EXTERNAL_INFO.test(objective) && !picked.some((entry) => isReading(entry.name))
+  const needsLookup =
+    EXTERNAL_INFO.test(objective) ||
+    (CREDIT_LOOKUP.test(objective) && CREDITED_WORK.test(objective)) ||
+    CURRENT_RESULT.test(objective)
+  const needsResearch = needsLookup && !picked.some((entry) => isReading(entry.name))
 
   if (picked.length === 0 && !needsResearch) {
     return makePlan({

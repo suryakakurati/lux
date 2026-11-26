@@ -59,7 +59,14 @@ export function findBinary(name: string): string | null {
 export function exec(
   file: string,
   args: string[] = [],
-  options: { timeout?: number; cwd?: string; input?: string; env?: NodeJS.ProcessEnv } = {}
+  options: {
+    timeout?: number
+    cwd?: string
+    input?: string
+    env?: NodeJS.ProcessEnv
+    /** Aborts the child process; a timed-out tool must not keep working. */
+    signal?: AbortSignal
+  } = {}
 ): Promise<ExecResult> {
   const timeout = options.timeout ?? 10_000
   return new Promise((resolve) => {
@@ -70,6 +77,7 @@ export function exec(
         timeout,
         cwd: options.cwd,
         maxBuffer: 4 * 1024 * 1024,
+        signal: options.signal,
         env: { ...process.env, ...options.env, PATH: options.env?.PATH ?? toolPath(), LUX: '1' }
       },
       (error, stdout, stderr) => {

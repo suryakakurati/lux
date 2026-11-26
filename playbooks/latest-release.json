@@ -10,7 +10,8 @@
       "title": "Find the current release notes",
       "kind": "gather",
       "tool": "research",
-      "accept": ["research", "web_search"]
+      "accept": ["research", "web_search"],
+      "requiresEvidence": true
     },
     {
       "title": "Read the release notes page",
